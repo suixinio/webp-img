@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片上传服务</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .upload-container {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px dashed #ccc;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .upload-container:hover {
+            border-color: #aaa;
+        }
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .image-preview {
+            margin-top: 15px;
+            max-width: 100%;
+            max-height: 300px;
+        }
+        #url-display {
+            word-break: break-all;
+            margin: 10px 0;
+            padding: 5px;
+            background-color: #f8f8f8;
+            border-radius: 3px;
+        }
+        #preview-container {
+            margin-top: 20px;
+            display: none;
+            text-align: center;
+        }
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>图片上传服务</h1>
+    
+    <div class="upload-container">
+        <form id="upload-form" enctype="multipart/form-data">
+            <input type="file" id="image-input" name="image" accept="image/*" style="display: none;">
+            <button type="button" class="upload-btn" onclick="document.getElementById('image-input').click()">选择图片</button>
+            <button type="submit" class="upload-btn">上传图片</button>
+        </form>
+        <p>支持 JPG、PNG、GIF 等格式图片</p>
+    </div>
+
+    <div id="preview-container">
+        <h3>图片预览</h3>
+        <img id="preview-image" class="image-preview" src="" alt="选择的图片预览">
+        <div id="file-name"></div>
+    </div>
+
+    <div id="result" class="result">
+        <h3>上传成功！</h3>
+        <p>图片 URL:</p>
+        <div id="url-display"></div>
+        <div>
+            <a id="image-link" href="#" target="_blank">查看图片</a>
+            <button onclick="copyImageUrl()" class="upload-btn">复制链接</button>
+        </div>
+        <img id="image-preview" class="image-preview" src="" alt="上传的图片预览">
+    </div>
+
+    <script>
+        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const fileInput = document.getElementById('image-input');
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('请选择一个图片文件');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('image', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error('上传失败');
+                }
+
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // 显示结果区域
+                    const resultDiv = document.getElementById('result');
+                    resultDiv.style.display = 'block';
+                    
+                    // 设置URL和链接
+                    const fullUrl = window.location.origin + data.url;
+                    document.getElementById('url-display').textContent = fullUrl;
+                    
+                    const imageLink = document.getElementById('image-link');
+                    imageLink.href = data.url;
+                    
+                    // 预览图片
+                    const preview = document.getElementById('image-preview');
+                    preview.src = data.url;
+                } else {
+                    alert('上传失败: ' + data.message);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('上传失败: ' + error.message);
+            }
+        });
+
+        // 显示选择的文件预览
+        document.getElementById('image-input').addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                const fileName = file.name;
+                const fileSize = (file.size / 1024).toFixed(2) + ' KB';
+                
+                // 显示文件名和大小
+                document.getElementById('file-name').textContent = `文件名: ${fileName} (${fileSize})`;
+                
+                // 创建预览
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const previewImage = document.getElementById('preview-image');
+                    previewImage.src = e.target.result;
+                    
+                    // 显示预览容器
+                    document.getElementById('preview-container').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        function copyImageUrl() {
+            const urlText = document.getElementById('url-display').textContent;
+            navigator.clipboard.writeText(urlText)
+                .then(() => {
+                    alert('链接已复制到剪贴板');
+                })
+                .catch(err => {
+                    console.error('复制失败:', err);
+                });
+        }
+    </script>
+</body>
+</html>
