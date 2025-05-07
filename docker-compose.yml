@@ -22,7 +22,6 @@ services:
       - WEBP_WEBP_DIR=/app/uploads/webp
       # 安全配置 - 生产环境中应使用更安全的密码和密钥
       - WEBP_ACCESS_PASSWORD=webpimg
-      - WEBP_UPLOAD_PASSWORD=webpimg
       - WEBP_JWT_SECRET=webpimg-secure-jwt-secret-key
       - WEBP_JWT_EXPIRATION_HOURS=24
       - WEBP_MAX_LOGIN_ATTEMPTS=5
