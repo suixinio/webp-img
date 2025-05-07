@@ -1,4 +1,4 @@
-FROM golang:1.20-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # 安装构建依赖
 RUN apk add --no-cache git
@@ -25,7 +25,7 @@ FROM alpine:latest
 RUN apk add --no-cache libwebp-tools
 
 # 为应用创建非root用户
-RUN adduser -D -H -h /app appuser
+# RUN adduser -D -H -h /app appuser
 
 # 设置工作目录
 WORKDIR /app
@@ -37,11 +37,11 @@ COPY --from=builder /app/webp-img .
 COPY --from=builder /app/templates ./templates
 
 # 创建上传目录结构并设置权限
-RUN mkdir -p /app/uploads/pics /app/uploads/webp && \
-    chown -R appuser:appuser /app
+# RUN mkdir -p /app/uploads/pics /app/uploads/webp && \
+#     chown -R appuser:appuser /app
 
 # 切换到非root用户
-USER appuser
+# USER appuser
 
 # 设置环境变量
 ENV WEBP_SERVER_PORT=8080
