@@ -51,7 +51,7 @@
             max-width: 100%;
             max-height: 300px;
         }
-        #url-display {
+        .url-display {
             word-break: break-all;
             margin: 10px 0;
             padding: 5px;
@@ -67,6 +67,46 @@
             margin-top: 10px;
             font-style: italic;
             color: #666;
+        }
+        .url-section {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+        .url-section h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        .file-info {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #f0f8ff;
+            border-radius: 5px;
+        }
+        .file-info h4 {
+            margin-top: 0;
+            color: #333;
+        }
+        .size-info {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+        .size-info .label {
+            font-weight: bold;
+        }
+        .compression-good {
+            color: #2e8b57;
+            font-weight: bold;
+        }
+        .compression-medium {
+            color: #ff8c00;
+            font-weight: bold;
+        }
+        .compression-bad {
+            color: #dc143c;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -90,13 +130,44 @@
 
     <div id="result" class="result">
         <h3>上传成功！</h3>
-        <p>图片 URL:</p>
-        <div id="url-display"></div>
-        <div>
-            <a id="image-link" href="#" target="_blank">查看图片</a>
-            <button onclick="copyImageUrl()" class="upload-btn">复制链接</button>
+        
+        <div id="image-result-content">
+            <!-- 文件大小信息部分 -->
+            <div class="file-info">
+                <h4>文件信息：</h4>
+                <div class="size-info">
+                    <span class="label">原始文件大小：</span>
+                    <span id="original-size"></span>
+                </div>
+                <div class="size-info">
+                    <span class="label">WebP文件大小：</span>
+                    <span id="webp-size"></span>
+                </div>
+                <div class="size-info">
+                    <span class="label">压缩比例：</span>
+                    <span id="compression-ratio"></span>
+                </div>
+            </div>
+            
+            <div class="url-section">
+                <h4>URL链接：</h4>
+                <div id="image-url" class="url-display"></div>
+                <div>
+                    <a id="image-link" href="#" target="_blank">查看图片</a>
+                    <button onclick="copyText('image-url')" class="upload-btn">复制链接</button>
+                </div>
+            </div>
+            
+            <div class="url-section">
+                <h4>Markdown格式：</h4>
+                <div id="image-markdown" class="url-display"></div>
+                <div>
+                    <button onclick="copyText('image-markdown')" class="upload-btn">复制Markdown</button>
+                </div>
+            </div>
+            
+            <img id="image-preview" class="image-preview" src="" alt="上传的图片预览">
         </div>
-        <img id="image-preview" class="image-preview" src="" alt="上传的图片预览">
     </div>
 
     <script>
@@ -129,16 +200,40 @@
                     const resultDiv = document.getElementById('result');
                     resultDiv.style.display = 'block';
                     
-                    // 设置URL和链接
-                    const fullUrl = window.location.origin + data.url;
-                    document.getElementById('url-display').textContent = fullUrl;
+                    // 获取服务器基础URL
+                    const host = window.location.host;
+                    const scheme = window.location.protocol;
+                    const baseURL = `${scheme}//${host}`;
                     
+                    // 设置图片URL和链接 - 使用 '/img/' 开头的URL
+                    const fullImgUrl = `${baseURL}${data.url}`; // 使用data.url这个以/img/开头的URL
+                    document.getElementById('image-url').textContent = fullImgUrl;
                     const imageLink = document.getElementById('image-link');
                     imageLink.href = data.url;
                     
+                    // 设置Markdown格式
+                    document.getElementById('image-markdown').textContent = `![图片](${fullImgUrl})`;
+                    
+                    // 显示文件大小信息
+                    document.getElementById('original-size').textContent = data.original_size_text || 'N/A';
+                    document.getElementById('webp-size').textContent = data.webp_size_text || 'N/A';
+                    
+                    // 显示压缩比例并设置颜色
+                    const compressionRatio = data.compression_ratio || 0;
+                    const ratioElement = document.getElementById('compression-ratio');
+                    ratioElement.textContent = compressionRatio.toFixed(1) + '%';
+                    
+                    // 根据压缩比例设置颜色（值越低越好）
+                    if (compressionRatio < 50) {
+                        ratioElement.className = 'compression-good';
+                    } else if (compressionRatio < 80) {
+                        ratioElement.className = 'compression-medium';
+                    } else {
+                        ratioElement.className = 'compression-bad';
+                    }
+                    
                     // 预览图片
-                    const preview = document.getElementById('image-preview');
-                    preview.src = data.url;
+                    document.getElementById('image-preview').src = data.url;
                 } else {
                     alert('上传失败: ' + data.message);
                 }
@@ -171,11 +266,12 @@
             }
         });
 
-        function copyImageUrl() {
-            const urlText = document.getElementById('url-display').textContent;
-            navigator.clipboard.writeText(urlText)
+        // 复制文本到剪贴板
+        function copyText(elementId) {
+            const text = document.getElementById(elementId).textContent;
+            navigator.clipboard.writeText(text)
                 .then(() => {
-                    alert('链接已复制到剪贴板');
+                    alert('内容已复制到剪贴板');
                 })
                 .catch(err => {
                     console.error('复制失败:', err);

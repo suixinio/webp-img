@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"log"
@@ -28,8 +28,8 @@ func LoadConfig() *Config {
 		ServerPort:  "8080",
 		UploadDir:   "./uploads", // 废弃，但保留向后兼容
 		TemplateDir: "./templates",
-		PicsDir:     "./pics",   // 原始图片保存目录
-		WebpDir:     "./webp",   // WebP图片保存目录
+		PicsDir:     "./uploads/pics", // 修改为uploads目录内的pics子目录
+		WebpDir:     "./uploads/webp", // 修改为uploads目录内的webp子目录
 		WebPQuality: 80,
 	}
 
@@ -68,7 +68,7 @@ func LoadConfig() *Config {
 		}
 	}
 
-	// 确保上传目录存在（为了向后兼容）
+	// 确保上传目录存在
 	if err := os.MkdirAll(config.UploadDir, 0755); err != nil {
 		log.Fatalf("无法创建上传目录 %s: %v", config.UploadDir, err)
 	}

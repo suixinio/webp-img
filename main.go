@@ -16,14 +16,17 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	// Import our local config package
+	cfg "github.com/suixinio/webp-img/config"
 )
 
 // 全局配置
-var config *Config
+var config *cfg.Config
 
 func main() {
 	// 加载配置
-	config = LoadConfig()
+	config = cfg.LoadConfig()
 
 	// 设置Gin路由器
 	router := gin.Default()
@@ -34,17 +37,14 @@ func main() {
 	// 定义路由
 	router.GET("/", homeHandler)
 	router.POST("/upload", uploadHandler)
-	router.GET("/img/*filename", imageHandler) // 使用通配符匹配包含路径的文件名
+	router.GET("/img/*filename", imageHandler) // 保留原有的/img/路径用于向后兼容
 
-	// 设置静态文件目录，用于向后兼容
+	// 设置静态文件服务
 	router.Static("/uploads", config.UploadDir)
-
-	// 设置新的静态文件目录
-	router.Static("/pics", config.PicsDir)
-	router.Static("/webp", config.WebpDir)
 
 	// 启动服务器
 	log.Printf("服务器在端口 %s 上启动...\n", config.ServerPort)
+	log.Printf("可以通过 /pics/ 和 /webp/ 直接访问图片\n")
 	router.Run(":" + config.ServerPort)
 }
 
@@ -123,18 +123,101 @@ func uploadHandler(c *gin.Context) {
 		return
 	}
 
+	// 获取原始文件大小
+	originalInfo, err := os.Stat(originalPath)
+	if err != nil {
+		log.Printf("获取原始文件信息失败: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "获取文件信息失败",
+		})
+		return
+	}
+	originalSize := originalInfo.Size()
+
 	// 转换为WebP并保存
 	if err := convertToWebP(originalPath, webpPath); err != nil {
 		log.Printf("转换为WebP失败: %v", err)
 		// 即使WebP转换失败，我们也会继续处理
 	}
 
-	// 返回URL给客户端
-	imageURL := fmt.Sprintf("/img/%s", relativePath)
+	// 获取WebP文件大小
+	webpSize := int64(0)
+	webpInfo, err := os.Stat(webpPath)
+	if err == nil {
+		webpSize = webpInfo.Size()
+	}
+
+	// 计算压缩比例（如果有WebP文件）
+	var compressionRatio float64 = 0
+	if webpSize > 0 && originalSize > 0 {
+		// 修改计算方式：显示节省了多少百分比，而不是大小比例
+		// 原来的计算: compressionRatio = float64(webpSize) / float64(originalSize) * 100
+		// 新计算: 100 - (webp大小占原图的比例)
+		compressionRatio = 100 - (float64(webpSize) / float64(originalSize) * 100)
+	}
+
+	// 计算各种URL
+	// 1. 传统的/img/路径 (向后兼容)
+	imgURL := fmt.Sprintf("/img/%s", relativePath)
+
+	// 2. 新的直接访问原始图片路径
+	picsURL := fmt.Sprintf("/uploads/pics/%s", relativePath)
+
+	// 3. 新的直接访问WebP图片路径
+	webpRelativePathWithExt := filepath.Join(
+		filepath.Dir(relativePath),
+		strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(filepath.Base(relativePath)))+".webp",
+	)
+	webpURL := fmt.Sprintf("/uploads/webp/%s", webpRelativePathWithExt)
+
+	// 获取服务器基础URL，如果没有特定的Host头，就使用本地URL
+	host := c.Request.Host
+	scheme := "http"
+	// 判断是否为HTTPS
+	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
+		scheme = "https"
+	}
+	baseURL := fmt.Sprintf("%s://%s", scheme, host)
+
+	// 生成完整的URLs，包含域名
+	fullPicsURL := fmt.Sprintf("%s%s", baseURL, picsURL)
+	fullWebpURL := fmt.Sprintf("%s%s", baseURL, webpURL)
+
+	// 生成Markdown格式
+	// 原始图片的Markdown格式
+	markdownPics := fmt.Sprintf("![图片](%s)", fullPicsURL)
+
+	// WebP图片的Markdown格式
+	markdownWebp := fmt.Sprintf("![图片](%s)", fullWebpURL)
+
+	// 格式化文件大小为KB或MB
+	formatFileSize := func(sizeInBytes int64) string {
+		if sizeInBytes < 1024 {
+			return fmt.Sprintf("%d B", sizeInBytes)
+		} else if sizeInBytes < 1024*1024 {
+			return fmt.Sprintf("%.2f KB", float64(sizeInBytes)/1024)
+		} else {
+			return fmt.Sprintf("%.2f MB", float64(sizeInBytes)/(1024*1024))
+		}
+	}
+
+	// 返回所有URL和Markdown格式给客户端
 	c.JSON(http.StatusOK, gin.H{
-		"status":  "success",
-		"url":     imageURL,
-		"message": "图片已成功上传并转换",
+		"status":             "success",
+		"url":                imgURL,                       // 传统URL (向后兼容)
+		"pics_url":           picsURL,                      // 直接访问原始图片的URL (相对路径)
+		"webp_url":           webpURL,                      // 直接访问WebP图片的URL (相对路径)
+		"full_pics_url":      fullPicsURL,                  // 直接访问原始图片的URL (完整路径)
+		"full_webp_url":      fullWebpURL,                  // 直接访问WebP图片的URL (完整路径)
+		"markdown_pics":      markdownPics,                 // 原始图片的Markdown格式
+		"markdown_webp":      markdownWebp,                 // WebP图片的Markdown格式
+		"original_size":      originalSize,                 // 原始图片大小（字节）
+		"original_size_text": formatFileSize(originalSize), // 原始图片大小（人类可读格式）
+		"webp_size":          webpSize,                     // WebP图片大小（字节）
+		"webp_size_text":     formatFileSize(webpSize),     // WebP图片大小（人类可读格式）
+		"compression_ratio":  compressionRatio,             // 压缩比例（百分比）
+		"message":            "图片已成功上传并转换",
 	})
 }
 
@@ -327,24 +410,55 @@ func convertAnimatedGif(srcPath, dstPath string) error {
 func convertWithCwebp(srcPath, dstPath string) error {
 	log.Printf("使用cwebp转换图片: %s", srcPath)
 
+	// 获取原始文件大小
+	srcInfo, err := os.Stat(srcPath)
+	if err != nil {
+		return fmt.Errorf("获取源文件信息失败: %w", err)
+	}
+	srcSize := srcInfo.Size()
+
+	// 获取文件扩展名（现在直接用于日志，不单独存储变量）
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	log.Printf("检测到文件类型: %s", ext)
+
 	// 检查cwebp是否可用
-	_, err := exec.LookPath("cwebp")
+	_, err = exec.LookPath("cwebp")
 	if err != nil {
 		log.Printf("cwebp工具不可用: %v, 将使用文件复制作为备用方案", err)
 		return copyFile(srcPath, dstPath)
 	}
 
-	// 使用cwebp转换，质量从配置获取
-	// 注意: cwebp需要参数和值分开传递
-	cmd := exec.Command("cwebp", "-q", fmt.Sprintf("%d", config.WebPQuality), srcPath, "-o", dstPath)
+	// 根据图片类型和大小设置不同的转换参数
+	var cmd *exec.Cmd
+
+	cmd = exec.Command("cwebp", "-q", fmt.Sprintf("%d", config.WebPQuality), "-z", "9", srcPath, "-o", dstPath)
+
+	// 执行转换
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		log.Printf("cwebp转换失败: %v, 输出: %s", err, output)
-		// 如果转换失败，复制原文件
 		return copyFile(srcPath, dstPath)
 	}
 
-	log.Printf("成功转换为WebP格式: %s", dstPath)
+	// 检查转换后的文件大小
+	dstInfo, err := os.Stat(dstPath)
+	if err != nil {
+		return fmt.Errorf("获取目标文件信息失败: %w", err)
+	}
+	dstSize := dstInfo.Size()
+
+	// 如果WebP文件比原始文件大，使用原始文件替代
+	if dstSize > srcSize {
+		log.Printf("WebP转换后文件变大 (%d -> %d 字节)，保留原始格式", srcSize, dstSize)
+		// 删除较大的WebP文件
+		os.Remove(dstPath)
+		// 复制原始文件到目标位置
+		return copyFile(srcPath, dstPath)
+	}
+
+	compressionRatio := float64(dstSize) / float64(srcSize) * 100
+	log.Printf("成功转换为WebP格式: %s (原始: %d字节, WebP: %d字节, 压缩率: %.1f%%)",
+		dstPath, srcSize, dstSize, compressionRatio)
 	return nil
 }
 
