@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // Config 存储应用程序配置信息
@@ -19,18 +20,30 @@ type Config struct {
 
 	// 图片转换配置
 	WebPQuality int // WebP质量 (1-100)
+
+	// 安全配置
+	AccessPassword    string        // 页面访问密码
+	JWTSecret         string        // JWT 密钥
+	JWTExpirationTime time.Duration // JWT 过期时间
+	MaxLoginAttempts  int           // 最大登录尝试次数
+	LockoutDuration   time.Duration // 锁定时间
 }
 
 // LoadConfig 从环境变量加载配置
 func LoadConfig() *Config {
 	config := &Config{
 		// 默认值
-		ServerPort:  "8080",
-		UploadDir:   "./uploads", // 废弃，但保留向后兼容
-		TemplateDir: "./templates",
-		PicsDir:     "./uploads/pics", // 修改为uploads目录内的pics子目录
-		WebpDir:     "./uploads/webp", // 修改为uploads目录内的webp子目录
-		WebPQuality: 80,
+		ServerPort:        "8080",
+		UploadDir:         "./uploads", // 废弃，但保留向后兼容
+		TemplateDir:       "./templates",
+		PicsDir:           "./uploads/pics", // 修改为uploads目录内的pics子目录
+		WebpDir:           "./uploads/webp", // 修改为uploads目录内的webp子目录
+		WebPQuality:       80,
+		AccessPassword:    "webpimg",                       // 默认页面访问密码
+		JWTSecret:         "webpimg-secure-jwt-secret-key", // 默认JWT密钥
+		JWTExpirationTime: 24 * time.Hour,                  // JWT默认过期时间为24小时
+		MaxLoginAttempts:  5,                               // 默认最大登录尝试次数
+		LockoutDuration:   1 * time.Hour,                   // 默认锁定时间为1小时
 	}
 
 	// 从环境变量读取配置，如果设置了则覆盖默认值
@@ -65,6 +78,35 @@ func LoadConfig() *Config {
 			config.WebPQuality = quality
 		} else {
 			log.Printf("警告: WEBP_QUALITY 环境变量无法解析为整数: %v, 将使用默认值 %d", err, config.WebPQuality)
+		}
+	}
+
+	// 安全配置
+	if accessPwd := os.Getenv("WEBP_ACCESS_PASSWORD"); accessPwd != "" {
+		config.AccessPassword = accessPwd
+	}
+
+	// JWT 配置
+	if jwtSecret := os.Getenv("WEBP_JWT_SECRET"); jwtSecret != "" {
+		config.JWTSecret = jwtSecret
+	}
+
+	if jwtExpStr := os.Getenv("WEBP_JWT_EXPIRATION_HOURS"); jwtExpStr != "" {
+		if jwtExp, err := strconv.Atoi(jwtExpStr); err == nil && jwtExp > 0 {
+			config.JWTExpirationTime = time.Duration(jwtExp) * time.Hour
+		}
+	}
+
+	// 登录尝试限制配置
+	if attemptsStr := os.Getenv("WEBP_MAX_LOGIN_ATTEMPTS"); attemptsStr != "" {
+		if attempts, err := strconv.Atoi(attemptsStr); err == nil && attempts > 0 {
+			config.MaxLoginAttempts = attempts
+		}
+	}
+
+	if lockoutStr := os.Getenv("WEBP_LOCKOUT_MINUTES"); lockoutStr != "" {
+		if lockout, err := strconv.Atoi(lockoutStr); err == nil && lockout > 0 {
+			config.LockoutDuration = time.Duration(lockout) * time.Minute
 		}
 	}
 

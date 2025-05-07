@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"image/gif"
-	_ "image/jpeg"
-	_ "image/png"
 	"io"
 	"log"
 	"net/http"
@@ -19,6 +17,7 @@ import (
 
 	// Import our local config package
 	cfg "github.com/suixinio/webp-img/config"
+	"github.com/suixinio/webp-img/security"
 )
 
 // 全局配置
@@ -35,8 +34,12 @@ func main() {
 	router.LoadHTMLGlob(filepath.Join(config.TemplateDir, "*"))
 
 	// 定义路由
-	router.GET("/", homeHandler)
-	router.POST("/upload", uploadHandler)
+	router.GET("/login", loginPageHandler)
+	router.POST("/login", loginHandler)
+
+	// 使用JWT中间件保护的路由
+	router.GET("/", security.AuthMiddleware(config), homeHandler)
+	router.POST("/upload", security.AuthMiddleware(config), uploadHandler)
 	router.GET("/img/*filename", imageHandler) // 保留原有的/img/路径用于向后兼容
 
 	// 设置静态文件服务
@@ -46,6 +49,88 @@ func main() {
 	log.Printf("服务器在端口 %s 上启动...\n", config.ServerPort)
 	log.Printf("可以通过 /pics/ 和 /webp/ 直接访问图片\n")
 	router.Run(":" + config.ServerPort)
+}
+
+// 登录页面处理函数
+func loginPageHandler(c *gin.Context) {
+	// 检查是否已经有有效的JWT令牌
+	tokenCookie, err := c.Cookie("auth_token")
+	if err == nil {
+		// 验证令牌有效性
+		valid, _ := security.ValidateToken(tokenCookie, config)
+		if valid {
+			// 如果令牌有效，重定向到主页
+			c.Redirect(http.StatusFound, "/")
+			return
+		}
+	}
+
+	// 为表单生成CSRF令牌
+	csrfToken := security.GenerateCSRFToken()
+	c.SetCookie("csrf_token", csrfToken, 3600, "/", "", false, true)
+
+	// 显示登录页面
+	c.HTML(http.StatusOK, "password.html", gin.H{
+		"message":   "",
+		"csrfToken": csrfToken,
+	})
+}
+
+// 登录处理函数
+func loginHandler(c *gin.Context) {
+	// 获取客户端IP，用于登录限速
+	clientIP := c.ClientIP()
+
+	// 检查是否被锁定
+	if !security.CheckLoginAttempts(clientIP, config) {
+		c.HTML(http.StatusTooManyRequests, "password.html", gin.H{
+			"message": "登录尝试次数过多，请稍后再试",
+		})
+		return
+	}
+
+	// 验证CSRF令牌
+	formToken := c.PostForm("csrf_token")
+	csrfCookie, err := c.Cookie("csrf_token")
+	if err != nil || formToken != csrfCookie {
+		c.HTML(http.StatusForbidden, "password.html", gin.H{
+			"message": "安全验证失败，请刷新页面重试",
+		})
+		return
+	}
+
+	// 获取和验证密码
+	password := c.PostForm("password")
+	if password == config.AccessPassword {
+		// 密码正确，生成JWT令牌
+		tokenString, err := security.GenerateToken(config)
+		if err == nil {
+			// 设置包含JWT的Cookie
+			c.SetCookie("auth_token", tokenString, int(config.JWTExpirationTime.Seconds()), "/", "", false, true)
+
+			// 记录成功的登录尝试
+			security.RecordLoginAttempt(clientIP, true, config)
+
+			// 重定向到主页
+			c.Redirect(http.StatusFound, "/")
+			return
+		} else {
+			log.Printf("生成JWT令牌失败: %v", err)
+		}
+	}
+
+	// 记录失败的登录尝试
+	security.RecordLoginAttempt(clientIP, false, config)
+
+	// 密码错误或其他错误，返回登录页面
+	// 重新生成CSRF令牌
+	csrfToken := security.GenerateCSRFToken()
+	c.SetCookie("csrf_token", csrfToken, 3600, "/", "", false, true)
+
+	c.HTML(http.StatusUnauthorized, "password.html", gin.H{
+		"message":   "密码错误，请重试",
+		"csrfToken": csrfToken,
+	})
 }
 
 func homeHandler(c *gin.Context) {
@@ -161,36 +246,6 @@ func uploadHandler(c *gin.Context) {
 	// 1. 传统的/img/路径 (向后兼容)
 	imgURL := fmt.Sprintf("/img/%s", relativePath)
 
-	// 2. 新的直接访问原始图片路径
-	picsURL := fmt.Sprintf("/uploads/pics/%s", relativePath)
-
-	// 3. 新的直接访问WebP图片路径
-	webpRelativePathWithExt := filepath.Join(
-		filepath.Dir(relativePath),
-		strings.TrimSuffix(filepath.Base(relativePath), filepath.Ext(filepath.Base(relativePath)))+".webp",
-	)
-	webpURL := fmt.Sprintf("/uploads/webp/%s", webpRelativePathWithExt)
-
-	// 获取服务器基础URL，如果没有特定的Host头，就使用本地URL
-	host := c.Request.Host
-	scheme := "http"
-	// 判断是否为HTTPS
-	if c.Request.TLS != nil || c.Request.Header.Get("X-Forwarded-Proto") == "https" {
-		scheme = "https"
-	}
-	baseURL := fmt.Sprintf("%s://%s", scheme, host)
-
-	// 生成完整的URLs，包含域名
-	fullPicsURL := fmt.Sprintf("%s%s", baseURL, picsURL)
-	fullWebpURL := fmt.Sprintf("%s%s", baseURL, webpURL)
-
-	// 生成Markdown格式
-	// 原始图片的Markdown格式
-	markdownPics := fmt.Sprintf("![图片](%s)", fullPicsURL)
-
-	// WebP图片的Markdown格式
-	markdownWebp := fmt.Sprintf("![图片](%s)", fullWebpURL)
-
 	// 格式化文件大小为KB或MB
 	formatFileSize := func(sizeInBytes int64) string {
 		if sizeInBytes < 1024 {
@@ -206,12 +261,6 @@ func uploadHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":             "success",
 		"url":                imgURL,                       // 传统URL (向后兼容)
-		"pics_url":           picsURL,                      // 直接访问原始图片的URL (相对路径)
-		"webp_url":           webpURL,                      // 直接访问WebP图片的URL (相对路径)
-		"full_pics_url":      fullPicsURL,                  // 直接访问原始图片的URL (完整路径)
-		"full_webp_url":      fullWebpURL,                  // 直接访问WebP图片的URL (完整路径)
-		"markdown_pics":      markdownPics,                 // 原始图片的Markdown格式
-		"markdown_webp":      markdownWebp,                 // WebP图片的Markdown格式
 		"original_size":      originalSize,                 // 原始图片大小（字节）
 		"original_size_text": formatFileSize(originalSize), // 原始图片大小（人类可读格式）
 		"webp_size":          webpSize,                     // WebP图片大小（字节）
