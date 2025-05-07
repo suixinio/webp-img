@@ -2,9 +2,7 @@ version: '3.8'
 
 services:
   webp-img:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: registry.cn-qingdao.aliyuncs.com/gitea_cloud/webp-img:latest
     container_name: webp-img
     ports:
       - "8080:8080"
