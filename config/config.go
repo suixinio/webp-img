@@ -19,7 +19,8 @@ type Config struct {
 	WebpDir     string // WebP图片目录
 
 	// 图片转换配置
-	WebPQuality int // WebP质量 (1-100)
+	WebPQuality           int  // WebP质量 (1-100)
+	ConvertExistingImages bool // 启动时是否转换现有图片
 
 	// 安全配置
 	AccessPassword    string        // 页面访问密码
@@ -113,6 +114,11 @@ func LoadConfig() *Config {
 	// 确保上传目录存在
 	if err := os.MkdirAll(config.UploadDir, 0755); err != nil {
 		log.Fatalf("无法创建上传目录 %s: %v", config.UploadDir, err)
+	}
+
+	// 检查是否启用启动时转换现有图片
+	if convertStr := os.Getenv("WEBP_CONVERT_EXISTING"); convertStr != "" {
+		config.ConvertExistingImages = convertStr == "true" || convertStr == "1" || convertStr == "yes"
 	}
 
 	// 确保原始图片目录存在

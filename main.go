@@ -27,6 +27,11 @@ func main() {
 	// 加载配置
 	config = cfg.LoadConfig()
 
+	// 如果启用了自动转换现有图片功能，则启动转换
+	if config.ConvertExistingImages {
+		go convertExistingImages()
+	}
+
 	// 设置Gin路由器
 	router := gin.Default()
 
@@ -591,4 +596,80 @@ func generatePaths(originalExt string) (originalPath, webpPath, relativePath str
 	relativePath = filepath.Join(currentYear, currentMonth, currentDay, filename)
 
 	return originalPath, webpPath, relativePath, nil
+}
+
+// convertExistingImages 扫描所有原始图片目录并转换缺少对应WebP版本的图片
+func convertExistingImages() {
+	log.Println("开始扫描并转换现有图片...")
+
+	// 记录开始时间，用于计算总耗时
+	startTime := time.Now()
+
+	// 统计计数
+	var totalImages, convertedImages, errorImages int
+
+	// 递归遍历原始图片目录
+	err := filepath.Walk(config.PicsDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			log.Printf("访问路径出错 %s: %v", path, err)
+			return filepath.SkipDir
+		}
+
+		// 跳过目录
+		if info.IsDir() {
+			return nil
+		}
+
+		// 仅处理图片文件
+		ext := strings.ToLower(filepath.Ext(path))
+		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" {
+			return nil
+		}
+
+		totalImages++
+
+		// 计算相对路径，用于生成WebP文件路径
+		relPath, err := filepath.Rel(config.PicsDir, path)
+		if err != nil {
+			log.Printf("计算相对路径失败 %s: %v", path, err)
+			errorImages++
+			return nil
+		}
+
+		// 构建对应的WebP路径
+		webpPath := filepath.Join(config.WebpDir, strings.TrimSuffix(relPath, ext)+".webp")
+
+		// 检查WebP文件是否已存在
+		if _, err := os.Stat(webpPath); os.IsNotExist(err) {
+			// WebP文件不存在，需要转换
+			log.Printf("转换图片: %s -> %s", path, webpPath)
+
+			// 确保WebP目标目录存在
+			webpDir := filepath.Dir(webpPath)
+			if err := os.MkdirAll(webpDir, 0755); err != nil {
+				log.Printf("创建WebP目录失败 %s: %v", webpDir, err)
+				errorImages++
+				return nil
+			}
+
+			// 调用转换函数
+			if err := convertToWebP(path, webpPath); err != nil {
+				log.Printf("转换失败 %s: %v", path, err)
+				errorImages++
+			} else {
+				convertedImages++
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("遍历图片目录失败: %v", err)
+	}
+
+	// 计算并显示统计信息
+	duration := time.Since(startTime)
+	log.Printf("批量转换完成: 总计 %d 张图片, 转换 %d 张, 失败 %d 张, 用时 %.2f 秒",
+		totalImages, convertedImages, errorImages, duration.Seconds())
 }
