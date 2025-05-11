@@ -390,6 +390,13 @@ func imageHandler(c *gin.Context) {
 
 // convertToWebP 将任何类型的图片转换为WebP格式
 func convertToWebP(srcPath, dstPath string) error {
+	// 检查源文件是否已经是WebP格式
+	ext := strings.ToLower(filepath.Ext(srcPath))
+	if ext == ".webp" {
+		log.Printf("源文件已经是WebP格式，直接复制: %s", srcPath)
+		return copyFile(srcPath, dstPath)
+	}
+
 	// 检测图片类型
 	imgType, isAnimated, err := detectImageType(srcPath)
 	if err != nil {
