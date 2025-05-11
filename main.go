@@ -398,13 +398,13 @@ func convertToWebP(srcPath, dstPath string) error {
 	}
 
 	// 检测图片类型
-	imgType, isAnimated, err := detectImageType(srcPath)
+	imgType, _, err := detectImageType(srcPath)
 	if err != nil {
 		return fmt.Errorf("检测图片类型失败: %w", err)
 	}
 
 	// 根据图片类型选择合适的转换方法
-	if isAnimated && imgType == "gif" {
+	if imgType == "gif" {
 		// 动画GIF需要特殊处理
 		return convertAnimatedGif(srcPath, dstPath)
 	} else {
