@@ -629,7 +629,7 @@ func convertExistingImages() {
 
 		// 仅处理图片文件
 		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" {
+		if ext != ".png" && ext != ".jpg" && ext != ".jpeg" && ext != ".gif" && ext != ".webp" {
 			return nil
 		}
 
