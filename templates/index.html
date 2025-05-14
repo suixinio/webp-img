@@ -3,316 +3,859 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>图片上传服务</title>
+    <title>WebP图片服务 - 图片上传和WebP转换</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
+        :root {
+            --primary-color: #0066ff;
+            --secondary-color: #f0f5ff;
+            --success-color: #12c26d;
+            --danger-color: #ff4d4f;
+            --warning-color: #faad14;
+            --text-color: #333;
+            --light-text: #666;
+            --lighter-text: #999;
+            --border-color: #e0e0e0;
+            --bg-color: #ffffff;
+            --light-bg: #f9f9f9;
+            --shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
         body {
-            font-family: 'Arial', sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--light-bg);
+            padding-bottom: 50px;
         }
-        h1 {
-            color: #333;
-            text-align: center;
+        
+        .wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
         }
-        .upload-container {
-            margin: 30px 0;
-            padding: 20px;
-            border: 2px dashed #ccc;
-            border-radius: 5px;
-            text-align: center;
-            transition: all 0.3s ease;
+        
+        /* Header */
+        header {
+            background-color: var(--bg-color);
+            box-shadow: var(--shadow);
+            position: relative;
+            z-index: 10;
         }
-        .upload-container:hover {
-            border-color: #aaa;
-        }
-        .upload-container.dragover {
-            background-color: rgba(76, 175, 80, 0.1);
-            border-color: #4CAF50;
-        }
-        .upload-btn {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        .upload-btn:hover {
-            background-color: #45a049;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            display: none;
-        }
-        .image-preview {
-            margin-top: 15px;
-            max-width: 100%;
-            max-height: 300px;
-        }
-        .url-display {
-            word-break: break-all;
-            margin: 10px 0;
-            padding: 5px;
-            background-color: #f8f8f8;
-            border-radius: 3px;
-        }
-        #preview-container {
-            margin-top: 20px;
-            display: none;
-            text-align: center;
-        }
-        #file-name {
-            margin-top: 10px;
-            font-style: italic;
-            color: #666;
-        }
-        .file-previews {
+        
+        .header-content {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 10px;
-            margin-top: 15px;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 0;
         }
-        .file-preview-item {
-            width: 150px;
-            margin-bottom: 15px;
+        
+        .logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            color: var(--primary-color);
+        }
+        
+        .logo-icon {
+            margin-right: 10px;
+            font-size: 1.8rem;
+            color: var(--primary-color);
+        }
+        
+        nav ul {
+            display: flex;
+            list-style: none;
+        }
+        
+        nav li {
+            margin-left: 20px;
+        }
+        
+        nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 5px 0;
             position: relative;
         }
-        .preview-img {
-            max-width: 100%;
-            max-height: 100px;
-            object-fit: contain;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+        
+        nav a:hover {
+            color: var(--primary-color);
         }
+        
+        nav a::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+            transition: width 0.3s;
+        }
+        
+        nav a:hover::after {
+            width: 100%;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 40px 0;
+        }
+        
+        .page-title {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--text-color);
+            font-size: 2rem;
+        }
+        
+        /* Upload Container */
+        .upload-container {
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin-bottom: 30px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 40px 20px;
+            margin: 15px 0;
+            transition: all 0.3s;
+            background-color: var(--light-bg);
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(0, 102, 255, 0.03);
+        }
+        
+        .upload-area.dragover {
+            background-color: rgba(0, 102, 255, 0.08);
+            border-color: var(--primary-color);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            color: var(--text-color);
+        }
+        
+        .upload-help {
+            color: var(--lighter-text);
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
+        
+        .btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background-color: #0052cc;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background-color: #f0f0f0;
+            color: var(--text-color);
+        }
+        
+        .btn-secondary:hover {
+            background-color: #e0e0e0;
+        }
+        
+        /* Preview Container */
+        .preview-container {
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .preview-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 0;
+        }
+        
+        .upload-progress {
+            margin: 20px 0;
+            height: 6px;
+            width: 100%;
+            background-color: #f3f3f3;
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background-color: var(--primary-color);
+            width: 0;
+            transition: width 0.3s;
+            border-radius: 3px;
+            position: relative;
+        }
+        
+        .progress-text {
+            position: absolute;
+            right: 0;
+            top: -20px;
+            font-size: 0.85rem;
+            color: var(--light-text);
+        }
+        
+        .file-previews {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .file-preview-item {
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            position: relative;
+            transition: all 0.2s;
+        }
+        
+        .file-preview-item:hover {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .preview-img {
+            width: 100%;
+            height: 100px;
+            object-fit: contain;
+            display: block;
+            margin-bottom: 8px;
+            border-radius: 2px;
+        }
+        
         .file-preview-name {
             font-size: 12px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
             margin-top: 5px;
+            color: var(--light-text);
         }
+        
         .upload-status {
             font-size: 11px;
-            margin-top: 3px;
-            color: #666;
+            margin-top: 5px;
+            padding: 2px 5px;
+            border-radius: 10px;
+            display: inline-block;
         }
-        .batch-upload-results {
+        
+        .status-pending {
+            background-color: #f0f0f0;
+            color: var(--light-text);
+        }
+        
+        .status-uploading {
+            background-color: #e6f7ff;
+            color: #1890ff;
+        }
+        
+        .status-success {
+            background-color: #f6ffed;
+            color: var(--success-color);
+        }
+        
+        .status-error {
+            background-color: #fff1f0;
+            color: var(--danger-color);
+        }
+        
+        .batch-results {
             margin-top: 20px;
-            border-top: 1px solid #ddd;
-            padding-top: 15px;
-        }
-        .upload-progress {
-            margin: 10px 0;
-            height: 20px;
-            width: 100%;
-            background-color: #f3f3f3;
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .progress-bar {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0;
-            transition: width 0.3s;
-            text-align: center;
-            line-height: 20px;
-            color: white;
-            font-size: 12px;
-        }
-        .url-section {
-            margin-top: 15px;
-            padding: 10px;
+            padding: 15px;
             background-color: #f9f9f9;
-            border-radius: 5px;
+            border-radius: 4px;
+            border-left: 4px solid var(--primary-color);
         }
-        .url-section h4 {
-            margin-top: 0;
-            color: #333;
+        
+        .batch-stats {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 10px;
         }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .stat-icon {
+            margin-right: 5px;
+            color: var(--primary-color);
+        }
+        
+        .stat-success {
+            color: var(--success-color);
+        }
+        
+        .stat-error {
+            color: var(--danger-color);
+        }
+        
+        /* Image Result */
+        .result-container {
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            padding: 25px;
+            margin: 30px 0;
+            display: none;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .result-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 0;
+            display: flex;
+            align-items: center;
+        }
+        
+        .result-icon {
+            margin-right: 8px;
+            color: var(--success-color);
+        }
+        
+        .image-preview-large {
+            max-width: 100%;
+            max-height: 400px;
+            margin: 20px auto;
+            display: block;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+        
         .file-info {
-            margin-top: 15px;
-            padding: 10px;
-            background-color: #f0f8ff;
-            border-radius: 5px;
+            background-color: var(--light-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
         }
-        .file-info h4 {
-            margin-top: 0;
-            color: #333;
+        
+        .info-title {
+            display: flex;
+            align-items: center;
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: var(--text-color);
         }
+        
+        .info-icon {
+            margin-right: 8px;
+            color: var(--primary-color);
+        }
+        
         .size-info {
             display: flex;
             justify-content: space-between;
-            margin: 5px 0;
-        }
-        .size-info .label {
-            font-weight: bold;
-        }
-        .compression-good {
-            color: #2e8b57;
-            font-weight: bold;
-        }
-        .compression-medium {
-            color: #ff8c00;
-            font-weight: bold;
-        }
-        .compression-bad {
-            color: #dc143c;
-            font-weight: bold;
-        }
-        .password-field {
-            margin: 15px 0;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f5f5f5;
-            text-align: left;
-        }
-        .password-field input {
-            width: 100%;
-            padding: 8px;
-            margin-top: 5px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+            margin: 8px 0;
+            font-size: 0.95rem;
         }
         
-        /* 加载效果样式 */
+        .size-label {
+            color: var(--light-text);
+        }
+        
+        .compression-good {
+            color: var(--success-color);
+            font-weight: 500;
+        }
+        
+        .compression-medium {
+            color: var(--warning-color);
+            font-weight: 500;
+        }
+        
+        .compression-bad {
+            color: var(--danger-color);
+            font-weight: 500;
+        }
+        
+        .url-section {
+            background-color: var(--light-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        
+        .url-display {
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-family: monospace;
+            word-break: break-all;
+            margin: 10px 0;
+            border: 1px solid #e0e0e0;
+            font-size: 0.9rem;
+            color: #555;
+            position: relative;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            right: 5px;
+            top: 5px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .copy-btn:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .copy-icon {
+            font-size: 12px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .action-btn {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        
+        .action-btn:hover {
+            background-color: #f0f0f0;
+        }
+        
+        .btn-icon {
+            margin-right: 5px;
+        }
+        
+        /* Loading overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            z-index: 100;
+            z-index: 1000;
             display: none;
         }
         
-        .loading-spinner {
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #4CAF50;
+        .loader {
+            width: 48px;
+            height: 48px;
             border-radius: 50%;
-            width: 50px;
-            height: 50px;
-            animation: spin 2s linear infinite;
+            position: relative;
+            animation: rotate 1s linear infinite;
         }
         
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        .loader::before, .loader::after {
+            content: "";
+            box-sizing: border-box;
+            position: absolute;
+            inset: 0px;
+            border-radius: 50%;
+            border: 5px solid #FFF;
+            animation: prixClipFix 2s linear infinite;
         }
         
-        /* 复制通知样式 */
-        .copy-notification {
+        .loader::after {
+            border-color: var(--primary-color);
+            animation: prixClipFix 2s linear infinite, rotate 0.5s linear infinite reverse;
+            inset: 6px;
+        }
+        
+        @keyframes rotate {
+            0% { transform: rotate(0deg) }
+            100% { transform: rotate(360deg) }
+        }
+        
+        @keyframes prixClipFix {
+            0% { clip-path: polygon(50% 50%, 0 0, 0 0, 0 0, 0 0, 0 0) }
+            25% { clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 0, 100% 0, 100% 0) }
+            50% { clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 100% 100%, 100% 100%) }
+            75% { clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 0 100%, 0 100%) }
+            100% { clip-path: polygon(50% 50%, 0 0, 100% 0, 100% 100%, 0 100%, 0 0) }
+        }
+        
+        .loading-text {
+            color: white;
+            margin-top: 20px;
+            font-size: 1rem;
+        }
+        
+        /* Notification */
+        .notification {
             position: fixed;
             top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 5px;
-            z-index: 101;
+            right: 20px;
+            background-color: var(--bg-color);
+            border-left: 4px solid var(--primary-color);
+            border-radius: 4px;
+            padding: 12px 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+            z-index: 1001;
             display: none;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: slide-in 0.3s forwards;
+            max-width: 350px;
+            word-break: break-word;
+        }
+        
+        @keyframes slide-in {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slide-out {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+        
+        .notification.success {
+            border-left-color: var(--success-color);
+        }
+        
+        .notification.error {
+            border-left-color: var(--danger-color);
+        }
+        
+        .notification.warning {
+            border-left-color: var(--warning-color);
+        }
+        
+        .notification.hide {
+            animation: slide-out 0.3s forwards;
+        }
+        
+        .notification-content {
+            display: flex;
+            align-items: center;
+        }
+        
+        .notification-icon {
+            margin-right: 10px;
+            font-size: 1.2rem;
+            color: var(--primary-color);
+        }
+        
+        .notification-icon.success {
+            color: var(--success-color);
+        }
+        
+        .notification-icon.error {
+            color: var(--danger-color);
+        }
+        
+        .notification-icon.warning {
+            color: var(--warning-color);
+        }
+        
+        .notification-close {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            color: var(--lighter-text);
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--bg-color);
+            box-shadow: 0 -2px 8px rgba(0,0,0,0.05);
+            padding: 20px 0;
+            color: var(--light-text);
+            text-align: center;
+            font-size: 0.9rem;
+            margin-top: 40px;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .footer-links {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .footer-link {
+            color: var(--light-text);
+            text-decoration: none;
+        }
+        
+        .footer-link:hover {
+            color: var(--primary-color);
+        }
+        
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            nav ul {
+                justify-content: center;
+            }
+            
+            nav li {
+                margin: 0 10px;
+            }
+            
+            .file-previews {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .page-title {
+                font-size: 1.6rem;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>图片上传服务</h1>
+    <header>
+        <div class="wrapper header-content">
+            <div class="logo">
+                <i class="bi bi-image logo-icon"></i>
+                <h1>WebP图片服务</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/" class="active">首页</a></li>
+                    <li><a href="#">使用指南</a></li>
+                    <li><a href="#">关于</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
     
-    <div class="upload-container" id="drop-area">
-        <form id="upload-form" enctype="multipart/form-data">
-            <input type="file" id="image-input" name="image" accept="image/*" multiple style="display: none;">
-            <button type="button" class="upload-btn" onclick="document.getElementById('image-input').click()">选择图片</button>
-            <button type="submit" class="upload-btn">上传图片</button>
-        </form>
-        <p>支持 JPG、PNG、GIF 等格式图片</p>
-        <p>支持批量上传，可拖拽多个文件或按住Ctrl/Shift多选文件</p>
-    </div>
-
-    <div id="preview-container">
-        <h3>图片预览</h3>
-        <div class="upload-progress">
-            <div id="progress-bar" class="progress-bar">0%</div>
-        </div>
-        <div class="file-previews" id="file-previews">
-            <!-- 文件预览将在这里动态添加 -->
-        </div>
-        <div id="batch-results" class="batch-upload-results" style="display: none;">
-            <h4>上传结果摘要</h4>
-            <div>成功上传: <span id="success-count">0</span> 张图片</div>
-            <div>上传失败: <span id="failure-count">0</span> 张图片</div>
-        </div>
-    </div>
-
-    <div id="result" class="result">
-        <h3>上传成功！</h3>
+    <div class="wrapper main-content">
+        <h1 class="page-title">快速上传图片并转换为WebP格式</h1>
         
-        <div id="image-result-content">
-            <!-- 文件大小信息部分 -->
+        <div class="upload-container" id="upload-container">
+            <form id="upload-form" enctype="multipart/form-data">
+                <div class="upload-area" id="drop-area">
+                    <i class="bi bi-cloud-arrow-up upload-icon"></i>
+                    <p class="upload-text">拖放图片到这里，或者点击选择文件</p>
+                    <p class="upload-help">支持 JPG、PNG、GIF 等格式，单文件最大 10MB</p>
+                    <input type="file" id="image-input" name="image" accept="image/*" multiple style="display: none;">
+                    <button type="button" class="btn" onclick="document.getElementById('image-input').click()">选择图片</button>
+                </div>
+                <div style="margin-top: 20px;">
+                    <button type="submit" class="btn" id="upload-btn">上传图片</button>
+                    <button type="button" class="btn btn-secondary" id="reset-btn">重置</button>
+                </div>
+            </form>
+        </div>
+        
+        <div id="preview-container" class="preview-container">
+            <div class="preview-header">
+                <h2 class="preview-title">图片预览</h2>
+                <div>
+                    <span id="selected-count">0</span> 张图片已选择
+                </div>
+            </div>
+            
+            <div class="upload-progress">
+                <div id="progress-bar" class="progress-bar"></div>
+                <div class="progress-text" id="progress-text">0%</div>
+            </div>
+            
+            <div class="file-previews" id="file-previews">
+                <!-- 文件预览将在这里动态添加 -->
+            </div>
+            
+            <div id="batch-results" class="batch-results" style="display: none;">
+                <h3>上传结果摘要</h3>
+                <div class="batch-stats">
+                    <div class="stat-item">
+                        <i class="bi bi-check-circle-fill stat-icon stat-success"></i>
+                        成功: <span id="success-count" class="stat-success">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <i class="bi bi-x-circle-fill stat-icon stat-error"></i>
+                        失败: <span id="failure-count" class="stat-error">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="result" class="result-container">
+            <div class="result-header">
+                <h2 class="result-title"><i class="bi bi-check-circle-fill result-icon"></i> 上传成功</h2>
+            </div>
+            
+            <img id="image-preview" class="image-preview-large" src="" alt="上传的图片预览">
+            
             <div class="file-info">
-                <h4>文件信息：</h4>
+                <div class="info-title">
+                    <i class="bi bi-info-circle info-icon"></i> 文件信息
+                </div>
                 <div class="size-info">
-                    <span class="label">原始文件大小：</span>
+                    <span class="size-label">原始文件大小：</span>
                     <span id="original-size"></span>
                 </div>
                 <div class="size-info">
-                    <span class="label">WebP文件大小：</span>
+                    <span class="size-label">WebP文件大小：</span>
                     <span id="webp-size"></span>
                 </div>
                 <div class="size-info">
-                    <span class="label">压缩比例：</span>
+                    <span class="size-label">压缩比例：</span>
                     <span id="compression-ratio"></span>
                 </div>
             </div>
             
             <div class="url-section">
-                <h4>URL链接：</h4>
-                <div id="image-url" class="url-display"></div>
-                <div>
-                    <a id="image-link" href="#" target="_blank">查看图片</a>
-                    <button onclick="copyText('image-url')" class="upload-btn">复制链接</button>
+                <div class="info-title">
+                    <i class="bi bi-link-45deg info-icon"></i> URL链接
+                </div>
+                <div class="url-display" id="image-url-container">
+                    <span id="image-url"></span>
+                    <button class="copy-btn" onclick="copyText('image-url')">
+                        <i class="bi bi-clipboard copy-icon"></i> 复制
+                    </button>
+                </div>
+                <div class="actions">
+                    <a id="image-link" href="#" target="_blank" class="action-btn">
+                        <i class="bi bi-eye btn-icon"></i> 查看图片
+                    </a>
+                    <button onclick="copyText('image-url')" class="action-btn">
+                        <i class="bi bi-clipboard btn-icon"></i> 复制URL
+                    </button>
                 </div>
             </div>
             
             <div class="url-section">
-                <h4>Markdown格式：</h4>
-                <div id="image-markdown" class="url-display"></div>
-                <div>
-                    <button onclick="copyText('image-markdown')" class="upload-btn">复制Markdown</button>
+                <div class="info-title">
+                    <i class="bi bi-markdown info-icon"></i> Markdown格式
+                </div>
+                <div class="url-display" id="image-markdown-container">
+                    <span id="image-markdown"></span>
+                    <button class="copy-btn" onclick="copyText('image-markdown')">
+                        <i class="bi bi-clipboard copy-icon"></i> 复制
+                    </button>
+                </div>
+                <div class="actions">
+                    <button onclick="copyText('image-markdown')" class="action-btn">
+                        <i class="bi bi-clipboard btn-icon"></i> 复制Markdown
+                    </button>
                 </div>
             </div>
-            
-            <img id="image-preview" class="image-preview" src="" alt="上传的图片预览">
         </div>
     </div>
-
+    
     <!-- 加载效果覆盖层 -->
     <div class="loading-overlay" id="loading-overlay">
-        <div class="loading-spinner"></div>
+        <div class="loader"></div>
+        <p class="loading-text" id="loading-text">正在上传图片...</p>
     </div>
     
-    <!-- 复制操作通知 -->
-    <div class="copy-notification" id="copy-notification">
-        内容已复制到剪贴板
+    <!-- 通知提示 -->
+    <div class="notification" id="notification">
+        <button class="notification-close" onclick="closeNotification()">
+            <i class="bi bi-x"></i>
+        </button>
+        <div class="notification-content">
+            <i class="bi bi-info-circle notification-icon" id="notification-icon"></i>
+            <span id="notification-message">操作成功</span>
+        </div>
     </div>
 
     <script>
         // 拖拽上传相关代码
         const dropArea = document.getElementById('drop-area');
+        const fileInput = document.getElementById('image-input');
+        const uploadForm = document.getElementById('upload-form');
+        const uploadBtn = document.getElementById('upload-btn');
+        const resetBtn = document.getElementById('reset-btn');
         
-        // 阻止浏览器默认行为（很重要）
+        // 阻止浏览器默认行为
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
             dropArea.addEventListener(eventName, preventDefaults, false);
             document.body.addEventListener(eventName, preventDefaults, false);
@@ -341,12 +884,17 @@
         }
         
         // 处理拖拽释放事件
-        dropArea.addEventListener('drop', handleDrop, false);
+        dropArea.addEventListener('drop', handleDrop);
+        dropArea.addEventListener('click', function(e) {
+            // 防止点击按钮时触发此事件
+            if (e.target === dropArea || e.target.classList.contains('upload-text') || 
+                e.target.classList.contains('upload-help') || e.target.classList.contains('upload-icon')) {
+                fileInput.click();
+            }
+        });
         
         function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
+            const files = e.dataTransfer.files;
             if (files && files.length) {
                 handleFiles(files);
             }
@@ -354,9 +902,6 @@
         
         function handleFiles(files) {
             if (files.length > 0) {
-                // 更新文件输入框
-                const fileInput = document.getElementById('image-input');
-                
                 // 创建新的 DataTransfer 对象并将所有文件添加进去
                 const dataTransfer = new DataTransfer();
                 
@@ -371,22 +916,50 @@
                 }
                 
                 if (imageFiles.length === 0) {
-                    alert('请选择至少一个图片文件');
+                    showNotification('请选择至少一个图片文件', 'error');
                     return;
                 }
                 
                 fileInput.files = dataTransfer.files;
                 
                 // 触发change事件以显示预览
-                const event = new Event('change');
-                fileInput.dispatchEvent(event);
+                fileInput.dispatchEvent(new Event('change'));
                 
                 // 显示提示信息
                 const message = imageFiles.length > 1 
                     ? `已添加${imageFiles.length}张图片，请点击"上传图片"按钮完成上传` 
                     : '图片已添加，请点击"上传图片"按钮完成上传';
-                showNotification(message);
+                showNotification(message, 'success');
+                
+                // 更新已选择图片计数
+                updateSelectedCount(imageFiles.length);
             }
+        }
+        
+        function updateSelectedCount(count) {
+            const countElement = document.getElementById('selected-count');
+            countElement.textContent = count;
+        }
+        
+        // 重置按钮
+        resetBtn.addEventListener('click', function() {
+            resetUploadForm();
+        });
+        
+        function resetUploadForm() {
+            fileInput.value = '';
+            document.getElementById('file-previews').innerHTML = '';
+            document.getElementById('preview-container').style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+            document.getElementById('batch-results').style.display = 'none';
+            updateSelectedCount(0);
+            
+            // 重置进度条
+            const progressBar = document.getElementById('progress-bar');
+            progressBar.style.width = '0%';
+            document.getElementById('progress-text').textContent = '0%';
+            
+            showNotification('已重置上传表单', 'info');
         }
         
         async function uploadFile(file, index, total) {
@@ -395,7 +968,7 @@
             if (index < previewItems.length) {
                 const statusDiv = previewItems[index].querySelector('.upload-status');
                 statusDiv.textContent = '上传中...';
-                statusDiv.dataset.status = 'uploading';
+                statusDiv.className = 'upload-status status-uploading';
             }
             
             const formData = new FormData();
@@ -408,7 +981,7 @@
                 });
                 
                 if (!response.ok) {
-                    throw new Error('上传失败');
+                    throw new Error(`上传失败: ${response.status}`);
                 }
                 
                 const data = await response.json();
@@ -440,12 +1013,12 @@
                     // 显示压缩比例并设置颜色
                     const compressionRatio = data.compression_ratio || 0;
                     const ratioElement = document.getElementById('compression-ratio');
-                    ratioElement.textContent = compressionRatio.toFixed(1) + '%';
+                    ratioElement.textContent = `${compressionRatio.toFixed(1)}% (节省了${compressionRatio.toFixed(1)}%)`;
                     
                     // 根据压缩比例设置颜色
-                    if (compressionRatio < 50) {
+                    if (compressionRatio >= 50) {
                         ratioElement.className = 'compression-good';
-                    } else if (compressionRatio < 80) {
+                    } else if (compressionRatio >= 20) {
                         ratioElement.className = 'compression-medium';
                     } else {
                         ratioElement.className = 'compression-bad';
@@ -459,29 +1032,21 @@
                 if (index < previewItems.length) {
                     const statusDiv = previewItems[index].querySelector('.upload-status');
                     statusDiv.textContent = '上传成功';
-                    statusDiv.dataset.status = 'success';
-                    statusDiv.style.color = 'green';
+                    statusDiv.className = 'upload-status status-success';
                     
                     // 添加URL到预览项
                     if (data.status === 'success' && data.url) {
                         const urlDiv = document.createElement('div');
                         urlDiv.className = 'file-preview-url';
                         urlDiv.style.fontSize = '10px';
-                        urlDiv.style.overflow = 'hidden';
-                        urlDiv.style.textOverflow = 'ellipsis';
-                        urlDiv.style.whiteSpace = 'nowrap';
-                        
-                        const host = window.location.host;
-                        const scheme = window.location.protocol;
-                        const baseURL = `${scheme}//${host}`;
-                        const fullImgUrl = `${baseURL}${data.url}`;
+                        urlDiv.style.marginTop = '5px';
                         
                         const urlLink = document.createElement('a');
                         urlLink.href = data.url;
                         urlLink.target = '_blank';
                         urlLink.textContent = '查看图片';
-                        urlLink.style.color = 'blue';
-                        urlLink.style.textDecoration = 'underline';
+                        urlLink.style.color = 'var(--primary-color)';
+                        urlLink.style.textDecoration = 'none';
                         
                         urlDiv.appendChild(urlLink);
                         previewItems[index].appendChild(urlDiv);
@@ -496,8 +1061,7 @@
                 if (index < previewItems.length) {
                     const statusDiv = previewItems[index].querySelector('.upload-status');
                     statusDiv.textContent = '上传失败';
-                    statusDiv.dataset.status = 'error';
-                    statusDiv.style.color = 'red';
+                    statusDiv.className = 'upload-status status-error';
                 }
                 
                 return { success: false, error };
@@ -507,6 +1071,7 @@
         async function uploadFiles(files) {
             // 显示加载效果和进度条
             document.getElementById('loading-overlay').style.display = 'flex';
+            document.getElementById('loading-text').textContent = '正在上传图片...';
             
             // 隐藏之前的结果
             document.getElementById('result').style.display = 'none';
@@ -519,9 +1084,10 @@
             for (let i = 0; i < files.length; i++) {
                 // 更新进度条
                 const progress = Math.round((i / files.length) * 100);
-                const progressBar = document.getElementById('progress-bar');
-                progressBar.style.width = `${progress}%`;
-                progressBar.textContent = `${progress}%`;
+                updateProgress(progress);
+                
+                // 更新加载文本
+                document.getElementById('loading-text').textContent = `正在上传 ${i+1}/${files.length} ...`;
                 
                 // 上传当前文件
                 const result = await uploadFile(files[i], i, files.length);
@@ -533,9 +1099,7 @@
             }
             
             // 完成全部上传，更新进度条到100%
-            const progressBar = document.getElementById('progress-bar');
-            progressBar.style.width = '100%';
-            progressBar.textContent = '100%';
+            updateProgress(100);
             
             // 隐藏加载效果
             document.getElementById('loading-overlay').style.display = 'none';
@@ -547,34 +1111,49 @@
             
             // 显示完成通知
             let message;
+            let type;
             if (failureCount === 0) {
                 message = `${successCount}张图片全部上传成功！`;
+                type = 'success';
             } else if (successCount === 0) {
                 message = `上传失败，${failureCount}张图片均未上传成功。`;
+                type = 'error';
             } else {
                 message = `上传完成，成功${successCount}张，失败${failureCount}张。`;
+                type = 'warning';
             }
-            showNotification(message);
+            showNotification(message, type);
         }
         
-        document.getElementById('upload-form').addEventListener('submit', async function(e) {
+        function updateProgress(percentage) {
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage}%`;
+        }
+        
+        // 上传表单提交
+        uploadForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            const fileInput = document.getElementById('image-input');
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert('请选择至少一个图片文件');
+                showNotification('请选择至少一个图片文件', 'error');
                 return;
             }
-
+            
             await uploadFiles(fileInput.files);
         });
 
         // 显示选择的文件预览
-        document.getElementById('image-input').addEventListener('change', function() {
+        fileInput.addEventListener('change', function() {
             if (this.files && this.files.length > 0) {
                 // 清除旧的预览
                 const previewContainer = document.getElementById('file-previews');
                 previewContainer.innerHTML = '';
+                
+                // 更新已选择图片计数
+                updateSelectedCount(this.files.length);
                 
                 // 重置批量上传结果
                 document.getElementById('batch-results').style.display = 'none';
@@ -582,15 +1161,13 @@
                 document.getElementById('failure-count').textContent = '0';
                 
                 // 重置进度条
-                const progressBar = document.getElementById('progress-bar');
-                progressBar.style.width = '0%';
-                progressBar.textContent = '0%';
+                updateProgress(0);
                 
                 // 为每个文件创建预览
                 for (let i = 0; i < this.files.length; i++) {
                     const file = this.files[i];
                     const fileName = file.name;
-                    const fileSize = (file.size / 1024).toFixed(2) + ' KB';
+                    const fileSize = formatFileSize(file.size);
                     
                     // 创建预览项容器
                     const previewItem = document.createElement('div');
@@ -606,11 +1183,13 @@
                     const nameDiv = document.createElement('div');
                     nameDiv.className = 'file-preview-name';
                     nameDiv.title = `${fileName} (${fileSize})`;
-                    nameDiv.textContent = fileName;
+                    nameDiv.textContent = fileName.length > 18 
+                        ? fileName.substring(0, 15) + '...' 
+                        : fileName;
                     
                     // 添加状态指示器
                     const statusDiv = document.createElement('div');
-                    statusDiv.className = 'upload-status';
+                    statusDiv.className = 'upload-status status-pending';
                     statusDiv.dataset.status = 'pending';
                     statusDiv.textContent = '等待上传';
                     
@@ -624,11 +1203,11 @@
                     
                     // 读取和显示图片预览
                     const reader = new FileReader();
-                    reader.onload = (function(item, img) {
+                    reader.onload = (function(img) {
                         return function(e) {
                             img.src = e.target.result;
                         };
-                    })(previewItem, previewImg);
+                    })(previewImg);
                     reader.readAsDataURL(file);
                 }
                 
@@ -636,34 +1215,41 @@
                 document.getElementById('preview-container').style.display = 'block';
             }
         });
-
+        
+        // 格式化文件大小
+        function formatFileSize(sizeInBytes) {
+            if (sizeInBytes < 1024) {
+                return `${sizeInBytes} B`;
+            } else if (sizeInBytes < 1024*1024) {
+                return `${(sizeInBytes / 1024).toFixed(2)} KB`;
+            } else {
+                return `${(sizeInBytes / (1024*1024)).toFixed(2)} MB`;
+            }
+        }
+        
         // 复制文本到剪贴板
         function copyText(elementId) {
             const text = document.getElementById(elementId).textContent;
             
-            // 检查是否支持Clipboard API
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(text)
                     .then(() => {
-                        showNotification('内容已复制到剪贴板');
+                        showNotification('内容已复制到剪贴板', 'success');
                     })
                     .catch(err => {
                         console.error('复制失败:', err);
                         fallbackCopyTextToClipboard(text);
                     });
             } else {
-                // 如果不支持Clipboard API，使用备选方法
                 fallbackCopyTextToClipboard(text);
             }
         }
         
         // 备选的复制文本方法
         function fallbackCopyTextToClipboard(text) {
-            // 创建一个临时文本区域
             const textArea = document.createElement('textarea');
             textArea.value = text;
             
-            // 避免滚动到底部
             textArea.style.top = '0';
             textArea.style.left = '0';
             textArea.style.position = 'fixed';
@@ -675,31 +1261,70 @@
             
             let successful = false;
             try {
-                // 执行复制命令
                 successful = document.execCommand('copy');
                 if (successful) {
-                    showNotification('内容已复制到剪贴板');
+                    showNotification('内容已复制到剪贴板', 'success');
                 } else {
-                    showNotification('无法复制内容，请手动复制');
+                    showNotification('无法复制内容，请手动复制', 'warning');
                 }
             } catch (err) {
                 console.error('复制失败:', err);
-                showNotification('无法复制内容，请手动复制');
+                showNotification('无法复制内容，请手动复制', 'error');
             }
             
             document.body.removeChild(textArea);
         }
         
-        // 显示通知函数
-        function showNotification(message) {
-            const notification = document.getElementById('copy-notification');
-            notification.textContent = message;
+        // 通知提示
+        let notificationTimeout;
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const notificationIcon = document.getElementById('notification-icon');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            // 清除之前的timeout
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+            
+            // 设置通知内容和类型
+            notificationMessage.textContent = message;
+            notification.className = 'notification ' + type;
+            
+            // 设置图标
+            notificationIcon.className = 'bi notification-icon';
+            switch(type) {
+                case 'success':
+                    notificationIcon.classList.add('bi-check-circle', 'notification-icon', 'success');
+                    break;
+                case 'error':
+                    notificationIcon.classList.add('bi-x-circle', 'notification-icon', 'error');
+                    break;
+                case 'warning':
+                    notificationIcon.classList.add('bi-exclamation-triangle', 'notification-icon', 'warning');
+                    break;
+                default:
+                    notificationIcon.classList.add('bi-info-circle', 'notification-icon');
+            }
+            
+            // 显示通知
             notification.style.display = 'block';
             
-            // 2秒后自动隐藏
+            // 3秒后隐藏
+            notificationTimeout = setTimeout(() => {
+                closeNotification();
+            }, 3000);
+        }
+        
+        function closeNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('hide');
+            
             setTimeout(() => {
                 notification.style.display = 'none';
-            }, 2000);
+                notification.classList.remove('hide');
+            }, 300);
         }
     </script>
 </body>
