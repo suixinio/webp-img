@@ -213,16 +213,40 @@
         
         .modal-info {
             position: absolute;
-            bottom: -40px;
+            bottom: -80px;
             left: 0;
             color: #f1f1f1;
             padding: 10px;
             font-size: 0.9rem;
+            width: 100%;
         }
         
         .image-count {
             color: #ccc;
             margin-left: 10px;
+        }
+        
+        .modal-actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-actions .action-btn {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.85rem;
+        }
+        
+        .modal-actions .action-btn:hover {
+            background-color: var(--primary-color);
         }
         
         .loading {
@@ -320,6 +344,14 @@
             <div class="modal-info">
                 <span id="image-name"></span>
                 <span class="image-count" id="image-count"></span>
+                <div class="modal-actions">
+                    <button class="action-btn" id="download-webp-btn" onclick="downloadCurrentImage('webp')">
+                        <i class="bi bi-download"></i> 下载WebP
+                    </button>
+                    <button class="action-btn" id="download-original-btn" onclick="downloadCurrentImage('original')">
+                        <i class="bi bi-download"></i> 下载原图
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -485,6 +517,12 @@
                             <button class="overlay-btn" onclick="copyMarkdownURL('${image.url}')" title="复制Markdown格式">
                                 <i class="bi bi-markdown"></i>
                             </button>
+                            <button class="overlay-btn" onclick="downloadImage('${image.url}', '${image.originalName}', 'webp')" title="下载WebP图片">
+                                <i class="bi bi-download"></i>
+                            </button>
+                            <button class="overlay-btn" onclick="downloadImage('${image.url}', '${image.originalName}', 'original')" title="下载原图">
+                                <i class="bi bi-file-earmark-arrow-down"></i>
+                            </button>
                             <button class="overlay-btn" onclick="openImage(${index})" title="查看大图">
                                 <i class="bi bi-arrows-fullscreen"></i>
                             </button>
@@ -576,6 +614,39 @@
         function getFullURL(relativePath) {
             const baseURL = window.location.protocol + '//' + window.location.host;
             return baseURL + relativePath;
+        }
+        
+        // 下载图片（缩略图点击）
+        function downloadImage(url, filename, type) {
+            // 获取图片路径（去掉/img/前缀）
+            const imgPath = url.replace('/img/', '');
+            
+            // 根据类型选择下载端点
+            let downloadUrl;
+            if (type === 'webp') {
+                downloadUrl = `/download/webp/${imgPath}`;
+            } else {
+                downloadUrl = `/download/original/${imgPath}`;
+            }
+            
+            // 创建一个临时链接并触发下载
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename; 
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            
+            // 显示下载通知
+            showNotification(`正在下载${type === 'webp' ? 'WebP图片' : '原图'}`, 'info');
+        }
+        
+        // 下载当前打开的图片（模态框中）
+        function downloadCurrentImage(type) {
+            if (currentImageIndex < 0 || currentImageIndex >= currentImages.length) return;
+            
+            const image = currentImages[currentImageIndex];
+            downloadImage(image.url, image.originalName, type);
         }
         
         // 复制文本到剪贴板
