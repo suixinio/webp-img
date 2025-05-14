@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebP图片服务 - 图片画廊</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/css/variables.css">
+    <link rel="stylesheet" href="/css/header.css">
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/footer.css">
+    <link rel="stylesheet" href="/css/responsive.css">
+    <link rel="stylesheet" href="/css/notifications.css">
+    
+    <style>
+        /* 画廊专用样式 */
+        .gallery-container {
+            padding: 20px 0;
+        }
+        
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .breadcrumb a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+        
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+        
+        .breadcrumb .separator {
+            margin: 0 10px;
+            color: #999;
+        }
+        
+        .directories-container {
+            margin-bottom: 30px;
+        }
+        
+        .directory-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin-bottom: 10px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            transition: background-color 0.2s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .directory-item:hover {
+            background-color: #e9e9e9;
+        }
+        
+        .directory-icon {
+            margin-right: 10px;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+        
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .gallery-item {
+            position: relative;
+            overflow: hidden;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            height: 0;
+            padding-bottom: 100%; /* 正方形布局 */
+        }
+        
+        .gallery-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .gallery-item img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .gallery-item .image-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .gallery-item:hover .image-overlay {
+            opacity: 1;
+        }
+        
+        .image-overlay .overlay-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .overlay-btn {
+            background: none;
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            font-size: 1rem;
+            padding: 0;
+        }
+        
+        .overlay-btn:hover {
+            color: var(--primary-color-light);
+        }
+        
+        .gallery-message {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 30px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+            font-style: italic;
+            color: #777;
+        }
+        
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            overflow: auto;
+        }
+        
+        .modal-content {
+            position: relative;
+            margin: auto;
+            margin-top: 50px;
+            max-width: 90%;
+            max-height: 80vh;
+        }
+        
+        .modal-img {
+            display: block;
+            width: 100%;
+            max-height: 80vh;
+            object-fit: contain;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: -40px;
+            right: 0;
+            color: #f1f1f1;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            background: none;
+            border: none;
+        }
+        
+        .modal-navigation {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+        
+        .nav-btn {
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-info {
+            position: absolute;
+            bottom: -40px;
+            left: 0;
+            color: #f1f1f1;
+            padding: 10px;
+            font-size: 0.9rem;
+        }
+        
+        .image-count {
+            color: #ccc;
+            margin-left: 10px;
+        }
+        
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+        }
+        
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .gallery-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+                grid-gap: 10px;
+            }
+            
+            .modal-content {
+                width: 95%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="wrapper header-content">
+            <div class="logo">
+                <i class="bi bi-image logo-icon"></i>
+                <h1>WebP图片服务</h1>
+            </div>
+            <nav>
+                <ul>
+                    <li><a href="/">首页</a></li>
+                    <li><a href="/gallery" class="active">画廊</a></li>
+                    <li><a href="#">使用指南</a></li>
+                    <li><a href="#">关于</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+    
+    <div class="wrapper main-content">
+        <h1 class="page-title">图片画廊</h1>
+        
+        <div class="gallery-container">
+            <!-- 面包屑导航 -->
+            <div class="breadcrumb" id="breadcrumb">
+                <a href="#" onclick="loadGallery(''); return false;"><i class="bi bi-house-door"></i> 首页</a>
+            </div>
+            
+            <!-- 目录列表 -->
+            <div class="directories-container" id="directories-container">
+                <h2>目录</h2>
+                <div id="directories-list" class="directories-list">
+                    <!-- 目录列表将在这里动态添加 -->
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 图片网格 -->
+            <h2>图片</h2>
+            <div class="gallery-grid" id="gallery-grid">
+                <!-- 图片项将在这里动态添加 -->
+                <div class="loading">
+                    <div class="loading-spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 图片查看模态框 -->
+    <div class="image-modal" id="image-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <img class="modal-img" id="modal-img" src="" alt="图片预览">
+            <div class="modal-navigation">
+                <button class="nav-btn" id="prev-btn" onclick="navigateImage(-1)">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="nav-btn" id="next-btn" onclick="navigateImage(1)">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+            <div class="modal-info">
+                <span id="image-name"></span>
+                <span class="image-count" id="image-count"></span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知提示 -->
+    <div class="notification" id="notification">
+        <button class="notification-close" onclick="closeNotification()">
+            <i class="bi bi-x"></i>
+        </button>
+        <div class="notification-content">
+            <i class="bi bi-info-circle notification-icon" id="notification-icon"></i>
+            <span id="notification-message">操作成功</span>
+        </div>
+    </div>
+    
+    <script>
+        // 存储当前图片列表和索引
+        let currentImages = [];
+        let currentImageIndex = 0;
+        let currentDirectory = '';
+        
+        // 页面加载完成后初始化画廊
+        document.addEventListener('DOMContentLoaded', function() {
+            loadGallery('');
+        });
+        
+        // 加载画廊内容
+        function loadGallery(directory) {
+            currentDirectory = directory;
+            updateBreadcrumb(directory);
+            
+            // 显示加载中状态
+            document.getElementById('directories-list').innerHTML = `<div class="loading"><div class="loading-spinner"></div></div>`;
+            document.getElementById('gallery-grid').innerHTML = `<div class="loading"><div class="loading-spinner"></div></div>`;
+            
+            // 发起API请求获取图片和目录
+            fetch(`/api/images?dir=${encodeURIComponent(directory)}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('网络响应不正确');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // 更新当前图片列表
+                    currentImages = data.images || [];
+                    
+                    // 显示目录
+                    displayDirectories(data.directories || []);
+                    
+                    // 显示图片
+                    displayImages(currentImages);
+                })
+                .catch(error => {
+                    console.error('获取图片失败:', error);
+                    showNotification('获取图片失败，请刷新页面重试', 'error');
+                    
+                    // 显示错误消息
+                    document.getElementById('directories-list').innerHTML = `
+                        <div class="gallery-message">
+                            <i class="bi bi-exclamation-triangle"></i> 无法加载目录列表
+                        </div>
+                    `;
+                    document.getElementById('gallery-grid').innerHTML = `
+                        <div class="gallery-message">
+                            <i class="bi bi-exclamation-triangle"></i> 无法加载图片，请刷新页面重试
+                        </div>
+                    `;
+                });
+        }
+        
+        // 更新面包屑导航
+        function updateBreadcrumb(directory) {
+            const breadcrumb = document.getElementById('breadcrumb');
+            
+            // 先清空，除了首页链接
+            breadcrumb.innerHTML = `<a href="#" onclick="loadGallery(''); return false;"><i class="bi bi-house-door"></i> 首页</a>`;
+            
+            if (directory) {
+                // 分割路径
+                const parts = directory.split('/');
+                let currentPath = '';
+                
+                // 添加每一级目录
+                for (let i = 0; i < parts.length; i++) {
+                    const part = parts[i];
+                    currentPath += (i > 0 ? '/' : '') + part;
+                    
+                    // 添加分隔符
+                    breadcrumb.innerHTML += `<span class="separator">/</span>`;
+                    
+                    // 如果是最后一级，不添加链接
+                    if (i === parts.length - 1) {
+                        breadcrumb.innerHTML += `<span>${part}</span>`;
+                    } else {
+                        breadcrumb.innerHTML += `<a href="#" onclick="loadGallery('${currentPath}'); return false;">${part}</a>`;
+                    }
+                }
+            }
+        }
+        
+        // 显示目录列表
+        function displayDirectories(directories) {
+            const container = document.getElementById('directories-list');
+            
+            if (directories.length === 0) {
+                container.innerHTML = '<div class="gallery-message">没有子目录</div>';
+                // 如果没有子目录，隐藏目录容器
+                document.getElementById('directories-container').style.display = 'none';
+                return;
+            }
+            
+            // 有子目录，显示目录容器
+            document.getElementById('directories-container').style.display = 'block';
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 添加目录项
+            directories.forEach(dir => {
+                const dirElem = document.createElement('a');
+                dirElem.className = 'directory-item';
+                dirElem.href = '#';
+                dirElem.onclick = function() {
+                    loadGallery(dir.path);
+                    return false;
+                };
+                
+                dirElem.innerHTML = `
+                    <i class="bi bi-folder directory-icon"></i>
+                    <span>${dir.name}</span>
+                `;
+                
+                container.appendChild(dirElem);
+            });
+        }
+        
+        // 显示图片列表
+        function displayImages(images) {
+            const container = document.getElementById('gallery-grid');
+            
+            if (images.length === 0) {
+                container.innerHTML = '<div class="gallery-message">此目录下没有图片</div>';
+                return;
+            }
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 添加图片项
+            images.forEach((image, index) => {
+                const imgElem = document.createElement('div');
+                imgElem.className = 'gallery-item';
+                
+                imgElem.innerHTML = `
+                    <img src="${image.url}" alt="${image.originalName}" loading="lazy">
+                    <div class="image-overlay">
+                        <span title="${image.originalName}">${truncateFilename(image.originalName, 15)}</span>
+                        <div class="overlay-actions">
+                            <button class="overlay-btn" onclick="copyImageURL('${image.url}')" title="复制图片URL">
+                                <i class="bi bi-link-45deg"></i>
+                            </button>
+                            <button class="overlay-btn" onclick="copyMarkdownURL('${image.url}')" title="复制Markdown格式">
+                                <i class="bi bi-markdown"></i>
+                            </button>
+                            <button class="overlay-btn" onclick="openImage(${index})" title="查看大图">
+                                <i class="bi bi-arrows-fullscreen"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                imgElem.addEventListener('click', function(e) {
+                    // 如果点击不是在按钮上，则打开图片
+                    if (!e.target.closest('.overlay-actions')) {
+                        openImage(index);
+                    }
+                });
+                
+                container.appendChild(imgElem);
+            });
+        }
+        
+        // 截断文件名
+        function truncateFilename(filename, maxLength) {
+            if (filename.length <= maxLength) return filename;
+            
+            const ext = filename.split('.').pop();
+            const name = filename.substring(0, filename.length - ext.length - 1);
+            
+            if (name.length <= maxLength - 3) return filename;
+            
+            return name.substring(0, maxLength - 3) + '...' + (ext ? '.' + ext : '');
+        }
+        
+        // 打开图片模态框
+        function openImage(index) {
+            if (index < 0 || index >= currentImages.length) return;
+            
+            currentImageIndex = index;
+            const image = currentImages[index];
+            
+            // 设置模态框内容
+            document.getElementById('modal-img').src = image.url;
+            document.getElementById('image-name').textContent = image.originalName;
+            document.getElementById('image-count').textContent = `${index + 1} / ${currentImages.length}`;
+            
+            // 显示模态框
+            document.getElementById('image-modal').style.display = 'block';
+            
+            // 禁止body滚动
+            document.body.style.overflow = 'hidden';
+        }
+        
+        // 关闭图片模态框
+        function closeModal() {
+            document.getElementById('image-modal').style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+        
+        // 导航到上一张/下一张图片
+        function navigateImage(direction) {
+            let newIndex = currentImageIndex + direction;
+            
+            // 循环导航
+            if (newIndex < 0) newIndex = currentImages.length - 1;
+            if (newIndex >= currentImages.length) newIndex = 0;
+            
+            openImage(newIndex);
+        }
+        
+        // 复制图片URL
+        function copyImageURL(url) {
+            // 获取完整URL
+            const fullUrl = getFullURL(url);
+            
+            // 复制到剪贴板
+            copyToClipboard(fullUrl);
+        }
+        
+        // 复制Markdown格式的图片链接
+        function copyMarkdownURL(url) {
+            // 获取完整URL
+            const fullUrl = getFullURL(url);
+            
+            // 创建Markdown格式
+            const markdown = `![图片](${fullUrl})`;
+            
+            // 复制到剪贴板
+            copyToClipboard(markdown);
+        }
+        
+        // 获取完整URL（包含协议和主机名）
+        function getFullURL(relativePath) {
+            const baseURL = window.location.protocol + '//' + window.location.host;
+            return baseURL + relativePath;
+        }
+        
+        // 复制文本到剪贴板
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text)
+                    .then(() => {
+                        showNotification('已复制到剪贴板', 'success');
+                    })
+                    .catch(err => {
+                        console.error('复制失败:', err);
+                        fallbackCopyTextToClipboard(text);
+                    });
+            } else {
+                fallbackCopyTextToClipboard(text);
+            }
+        }
+        
+        // 备选的复制文本方法
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.position = 'fixed';
+            textArea.style.opacity = '0';
+            
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+                if (successful) {
+                    showNotification('已复制到剪贴板', 'success');
+                } else {
+                    showNotification('无法复制，请手动复制', 'warning');
+                }
+            } catch (err) {
+                console.error('复制失败:', err);
+                showNotification('无法复制，请手动复制', 'error');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // 通知提示
+        let notificationTimeout;
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.getElementById('notification');
+            const notificationIcon = document.getElementById('notification-icon');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            // 清除之前的timeout
+            if (notificationTimeout) {
+                clearTimeout(notificationTimeout);
+            }
+            
+            // 设置通知内容和类型
+            notificationMessage.textContent = message;
+            notification.className = 'notification ' + type;
+            
+            // 设置图标
+            notificationIcon.className = 'bi notification-icon';
+            switch(type) {
+                case 'success':
+                    notificationIcon.classList.add('bi-check-circle', 'notification-icon', 'success');
+                    break;
+                case 'error':
+                    notificationIcon.classList.add('bi-x-circle', 'notification-icon', 'error');
+                    break;
+                case 'warning':
+                    notificationIcon.classList.add('bi-exclamation-triangle', 'notification-icon', 'warning');
+                    break;
+                default:
+                    notificationIcon.classList.add('bi-info-circle', 'notification-icon');
+            }
+            
+            // 显示通知
+            notification.style.display = 'block';
+            
+            // 3秒后隐藏
+            notificationTimeout = setTimeout(() => {
+                closeNotification();
+            }, 3000);
+        }
+        
+        function closeNotification() {
+            const notification = document.getElementById('notification');
+            notification.classList.add('hide');
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+                notification.classList.remove('hide');
+            }, 300);
+        }
+        
+        // 键盘事件处理
+        document.addEventListener('keydown', function(e) {
+            if (document.getElementById('image-modal').style.display === 'block') {
+                if (e.key === 'Escape') {
+                    closeModal();
+                } else if (e.key === 'ArrowLeft') {
+                    navigateImage(-1);
+                } else if (e.key === 'ArrowRight') {
+                    navigateImage(1);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -44,6 +45,8 @@ func main() {
 
 	// 使用JWT中间件保护的路由
 	router.GET("/", security.AuthMiddleware(config), homeHandler)
+	router.GET("/gallery", security.AuthMiddleware(config), galleryHandler)
+	router.GET("/api/images", security.AuthMiddleware(config), listImagesHandler)
 	router.POST("/upload", security.AuthMiddleware(config), uploadHandler)
 	router.GET("/img/*filename", imageHandler) // 保留原有的/img/路径用于向后兼容
 
@@ -143,6 +146,152 @@ func loginHandler(c *gin.Context) {
 
 func homeHandler(c *gin.Context) {
 	c.HTML(http.StatusOK, "index.html", nil)
+}
+
+// galleryHandler 处理画廊页面的请求
+func galleryHandler(c *gin.Context) {
+	c.HTML(http.StatusOK, "gallery.html", nil)
+}
+
+// ImageInfo 存储图片信息的结构体
+type ImageInfo struct {
+	URL          string `json:"url"`          // 图片URL
+	ThumbnailURL string `json:"thumbnailUrl"` // 缩略图URL (这里使用同一URL)
+	OriginalName string `json:"originalName"` // 原始文件名
+	UploadDate   string `json:"uploadDate"`   // 上传日期
+	Directory    string `json:"directory"`    // 目录路径
+}
+
+// DirectoryInfo 存储目录信息的结构体
+type DirectoryInfo struct {
+	Path   string      `json:"path"`   // 目录路径
+	Name   string      `json:"name"`   // 目录名称
+	Images []ImageInfo `json:"images"` // 目录下的图片
+}
+
+// listImagesHandler 返回所有图片的列表
+func listImagesHandler(c *gin.Context) {
+	// 读取查询参数，如果有的话
+	dir := c.Query("dir") // 如果指定了目录，则只列出该目录下的图片
+
+	// 根目录是配置中的 WebP 目录
+	baseDir := config.WebpDir
+
+	// 如果指定了目录，则使用该目录
+	if dir != "" {
+		// 处理相对路径，防止目录遍历攻击
+		cleanDir := filepath.Clean(dir)
+		if cleanDir == ".." || strings.HasPrefix(cleanDir, "../") {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "无效的目录路径"})
+			return
+		}
+		baseDir = filepath.Join(baseDir, cleanDir)
+	}
+
+	// 检查目录是否存在
+	if _, err := os.Stat(baseDir); os.IsNotExist(err) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "目录不存在"})
+		return
+	}
+
+	// 存储目录和图片信息
+	var directories []DirectoryInfo
+	currentDir := DirectoryInfo{
+		Path:   dir,
+		Name:   filepath.Base(dir),
+		Images: []ImageInfo{},
+	}
+
+	// 遍历目录
+	files, err := os.ReadDir(baseDir)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "无法读取目录"})
+		return
+	}
+
+	// 先处理子目录
+	for _, file := range files {
+		if file.IsDir() {
+			// 这是一个子目录，添加到目录列表
+			subDirPath := filepath.Join(dir, file.Name())
+			directories = append(directories, DirectoryInfo{
+				Path: subDirPath,
+				Name: file.Name(),
+				// 不预先加载子目录中的图片，等用户点击目录时再加载
+				Images: []ImageInfo{},
+			})
+		}
+	}
+
+	// 再处理图片文件
+	for _, file := range files {
+		if !file.IsDir() {
+			// 检查是否是WebP图片
+			ext := strings.ToLower(filepath.Ext(file.Name()))
+			if ext == ".webp" {
+				// 这是一个WebP图片，添加到当前目录的图片列表
+				imagePath := file.Name()
+				if dir != "" {
+					imagePath = filepath.Join(dir, file.Name())
+				}
+
+				// 获取图片信息
+				imgURL := fmt.Sprintf("/img/%s", imagePath)
+
+				// 创建一个图片信息对象
+				imgInfo := ImageInfo{
+					URL:          imgURL,
+					ThumbnailURL: imgURL, // 使用同一个URL作为缩略图
+					OriginalName: file.Name(),
+					// 从文件名中提取上传日期（假设文件名格式为 timestamp.webp）
+					UploadDate: formatTimestampFromFilename(file.Name()),
+					Directory:  dir,
+				}
+
+				// 添加到当前目录的图片列表
+				currentDir.Images = append(currentDir.Images, imgInfo)
+			}
+		}
+	}
+
+	// 如果请求的是根目录，则返回所有子目录和根目录下的图片
+	if dir == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"directories": directories,
+			"images":      currentDir.Images,
+		})
+	} else {
+		// 否则，返回当前目录的图片和子目录
+		c.JSON(http.StatusOK, gin.H{
+			"directory":   currentDir,
+			"directories": directories,
+			"images":      currentDir.Images,
+		})
+	}
+}
+
+// formatTimestampFromFilename 从文件名中提取并格式化时间戳
+func formatTimestampFromFilename(filename string) string {
+	// 去掉扩展名
+	basename := strings.TrimSuffix(filename, filepath.Ext(filename))
+
+	// 从文件名中提取时间戳部分（假设格式为 unixtime-milliseconds）
+	parts := strings.Split(basename, "-")
+	if len(parts) < 1 {
+		return "" // 文件名格式不正确
+	}
+
+	// 尝试将时间戳转换为 time.Time
+	timestamp, err := strconv.ParseInt(parts[0], 10, 64)
+	if err != nil {
+		return "" // 时间戳转换失败
+	}
+
+	// 将 Unix 时间戳转换为 time.Time
+	t := time.Unix(timestamp, 0)
+
+	// 格式化为易读的日期时间
+	return t.Format("2006-01-02 15:04:05")
 }
 
 func uploadHandler(c *gin.Context) {
