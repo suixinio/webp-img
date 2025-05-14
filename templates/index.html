@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>WebP图片服务 - 图片上传和WebP转换</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/templates/markdown-button-styles.css">
     <style>
         :root {
             --primary-color: #0066ff;
@@ -1036,6 +1037,7 @@
                     
                     // 添加URL到预览项
                     if (data.status === 'success' && data.url) {
+                        // 预览图片链接
                         const urlDiv = document.createElement('div');
                         urlDiv.className = 'file-preview-url';
                         urlDiv.style.fontSize = '10px';
@@ -1050,6 +1052,46 @@
                         
                         urlDiv.appendChild(urlLink);
                         previewItems[index].appendChild(urlDiv);
+                        
+                        // 添加隐藏的Markdown文本元素
+                        const markdownTextId = `markdown-text-${index}`;
+                        const markdownText = document.createElement('span');
+                        markdownText.id = markdownTextId;
+                        markdownText.style.display = 'none';
+                        
+                        // 获取服务器基础URL用于生成完整URL
+                        const host = window.location.host;
+                        const scheme = window.location.protocol;
+                        const baseURL = `${scheme}//${host}`;
+                        const fullImgUrl = `${baseURL}${data.url}`;
+                        
+                        // 设置Markdown格式
+                        markdownText.textContent = `![图片](${fullImgUrl})`;
+                        previewItems[index].appendChild(markdownText);
+                        
+                        // 添加复制Markdown按钮
+                        const markdownDiv = document.createElement('div');
+                        markdownDiv.className = 'file-preview-url';
+                        
+                        const markdownBtn = document.createElement('button');
+                        markdownBtn.className = 'action-btn';
+                        markdownBtn.onclick = function() { 
+                            copyText(markdownTextId); 
+                        };
+                        
+                        // 添加图标和文字
+                        const iconSpan = document.createElement('i');
+                        iconSpan.className = 'bi bi-markdown btn-icon';
+                        markdownBtn.appendChild(iconSpan);
+                        
+                        const textSpan = document.createTextNode('复制Markdown');
+                        markdownBtn.appendChild(textSpan);
+                        
+                        markdownDiv.appendChild(markdownBtn);
+                        previewItems[index].appendChild(markdownDiv);
+                        
+                        // 调试日志
+                        console.log('Added Markdown button to preview item', index);
                     }
                 }
                 
