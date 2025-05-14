@@ -35,8 +35,8 @@ func main() {
 	// 设置Gin路由器
 	router := gin.Default()
 
-	// 加载HTML模板
-	router.LoadHTMLGlob(filepath.Join(config.TemplateDir, "*"))
+	// 加载HTML模板，但排除css目录
+	router.LoadHTMLGlob(filepath.Join(config.TemplateDir, "*.html"))
 
 	// 定义路由
 	router.GET("/login", loginPageHandler)
@@ -49,6 +49,9 @@ func main() {
 
 	// 设置静态文件服务
 	router.Static("/uploads", config.UploadDir)
+
+	// 设置CSS静态文件服务
+	router.Static("/css", filepath.Join(config.TemplateDir, "css"))
 
 	// 启动服务器
 	log.Printf("服务器在端口 %s 上启动...\n", config.ServerPort)

@@ -1,0 +1,44 @@
+/* Media Queries and Responsive Styles */
+@media (max-width: 768px) {
+    /* Header responsive styles */
+    .header-content {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    nav ul {
+        justify-content: center;
+    }
+    
+    nav li {
+        margin: 0 10px;
+    }
+    
+    /* Content responsive styles */
+    .file-previews {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+    
+    .page-title {
+        font-size: 1.6rem;
+    }
+}
+
+/* Additional tablet responsive styles */
+@media (max-width: 992px) {
+    .actions {
+        justify-content: center;
+    }
+}
+
+/* Mobile phone responsive styles */
+@media (max-width: 576px) {
+    .upload-area {
+        padding: 25px 10px;
+    }
+    
+    .batch-stats {
+        flex-direction: column;
+        gap: 10px;
+    }
+}

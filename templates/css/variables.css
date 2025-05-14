@@ -1,0 +1,35 @@
+/* Variables and root styles */
+:root {
+    --primary-color: #0066ff;
+    --secondary-color: #f0f5ff;
+    --success-color: #12c26d;
+    --danger-color: #ff4d4f;
+    --warning-color: #faad14;
+    --text-color: #333;
+    --light-text: #666;
+    --lighter-text: #999;
+    --border-color: #e0e0e0;
+    --bg-color: #ffffff;
+    --light-bg: #f9f9f9;
+    --shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    background-color: var(--light-bg);
+    padding-bottom: 50px;
+}
+
+.wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}

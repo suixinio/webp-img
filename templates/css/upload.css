@@ -1,0 +1,49 @@
+/* Upload Container Styles */
+.upload-container {
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 25px;
+    margin-bottom: 30px;
+    text-align: center;
+    transition: all 0.3s;
+}
+
+.upload-area {
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 40px 20px;
+    margin: 15px 0;
+    transition: all 0.3s;
+    background-color: var(--light-bg);
+    position: relative;
+    cursor: pointer;
+}
+
+.upload-area:hover {
+    border-color: var(--primary-color);
+    background-color: rgba(0, 102, 255, 0.03);
+}
+
+.upload-area.dragover {
+    background-color: rgba(0, 102, 255, 0.08);
+    border-color: var(--primary-color);
+}
+
+.upload-icon {
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.upload-text {
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    color: var(--text-color);
+}
+
+.upload-help {
+    color: var(--lighter-text);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
