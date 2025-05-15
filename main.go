@@ -671,7 +671,7 @@ func convertWithCwebp(srcPath, dstPath string) error {
 		return copyFile(srcPath, dstPath)
 	}
 
-	compressionRatio := float64(dstSize) / float64(srcSize) * 100
+	compressionRatio := 100 - (float64(dstSize) / float64(srcSize) * 100)
 	log.Printf("成功转换为WebP格式: %s (原始: %d字节, WebP: %d字节, 压缩率: %.1f%%)",
 		dstPath, srcSize, dstSize, compressionRatio)
 	return nil
@@ -836,7 +836,7 @@ func convertExistingImages() {
 		if _, err := os.Stat(webpPath); err == nil {
 			webpExists = true
 		}
-		
+
 		if config.ForceRegenerateWebP || !webpExists {
 			// WebP文件不存在或需要强制重新生成
 			if config.ForceRegenerateWebP && webpExists {
