@@ -602,6 +602,13 @@ func detectImageType(filePath string) (imgType string, isAnimated bool, err erro
 func convertAnimatedGif(srcPath, dstPath string) error {
 	log.Printf("处理动画GIF: %s", srcPath)
 
+	// 获取原始文件大小
+	srcInfo, err := os.Stat(srcPath)
+	if err != nil {
+		return fmt.Errorf("获取源文件信息失败: %w", err)
+	}
+	srcSize := srcInfo.Size()
+
 	// 检查gif2webp是否可用
 	if _, err := exec.LookPath("gif2webp"); err == nil {
 		// 使用gif2webp转换，质量从配置获取
@@ -609,6 +616,25 @@ func convertAnimatedGif(srcPath, dstPath string) error {
 		cmd := exec.Command("gif2webp", "-q", fmt.Sprintf("%d", config.WebPQuality), "-m", "6", srcPath, "-mt", "-min_size", "-o", dstPath)
 		output, err := cmd.CombinedOutput()
 		if err == nil {
+			// 检查转换后的文件大小
+			dstInfo, err := os.Stat(dstPath)
+			if err == nil {
+				dstSize := dstInfo.Size()
+
+				// 如果WebP文件比原始文件大，使用原始文件替代
+				if dstSize > srcSize {
+					log.Printf("动画WebP转换后文件变大 (%d -> %d 字节)，保留原始格式", srcSize, dstSize)
+					// 删除较大的WebP文件
+					os.Remove(dstPath)
+					// 复制原始文件到目标位置
+					return copyFile(srcPath, dstPath)
+				}
+
+				compressionRatio := 100 - (float64(dstSize) / float64(srcSize) * 100)
+				log.Printf("成功将动画GIF转换为WebP: %s (原始: %d字节, WebP: %d字节, 压缩率: %.1f%%)",
+					dstPath, srcSize, dstSize, compressionRatio)
+				return nil
+			}
 			log.Printf("成功将动画GIF转换为WebP: %s", dstPath)
 			return nil
 		}
