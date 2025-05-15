@@ -606,7 +606,7 @@ func convertAnimatedGif(srcPath, dstPath string) error {
 	if _, err := exec.LookPath("gif2webp"); err == nil {
 		// 使用gif2webp转换，质量从配置获取
 		// 注意: gif2webp需要参数和值分开传递
-		cmd := exec.Command("gif2webp", "-q", fmt.Sprintf("%d", config.WebPQuality), "-m", "6", "-mixed", srcPath, "-o", dstPath)
+		cmd := exec.Command("gif2webp", "-q", fmt.Sprintf("%d", config.WebPQuality), "-m", "6", srcPath, "-mt", "-min_size", "-o", dstPath)
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			log.Printf("成功将动画GIF转换为WebP: %s", dstPath)
