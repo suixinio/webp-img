@@ -285,12 +285,13 @@
     <header>
         <div class="wrapper header-content">
             <div class="logo">
-                <i class="bi bi-image logo-icon"></i>
-                <h1>WebP图片服务</h1>
+                <a href="/" style="display: flex; align-items: center; text-decoration: none; color: inherit;">
+                    <i class="bi bi-image logo-icon"></i>
+                    <h1>WebP图片服务</h1>
+                </a>
             </div>
             <nav>
                 <ul>
-                    <li><a href="/">首页</a></li>
                     <li><a href="/gallery" class="active">画廊</a></li>
                 </ul>
             </nav>
@@ -345,11 +346,8 @@
                 <span id="image-name"></span>
                 <span class="image-count" id="image-count"></span>
                 <div class="modal-actions">
-                    <button class="action-btn" id="download-webp-btn" onclick="downloadCurrentImage('webp')">
+                    <button class="action-btn" id="download-webp-btn" onclick="downloadCurrentImage()">
                         <i class="bi bi-download"></i> 下载WebP
-                    </button>
-                    <button class="action-btn" id="download-original-btn" onclick="downloadCurrentImage('original')">
-                        <i class="bi bi-download"></i> 下载原图
                     </button>
                 </div>
             </div>
@@ -520,9 +518,6 @@
                             <button class="overlay-btn" onclick="downloadImage('${image.url}', '${image.originalName}', 'webp')" title="下载WebP图片">
                                 <i class="bi bi-download"></i>
                             </button>
-                            <button class="overlay-btn" onclick="downloadImage('${image.url}', '${image.originalName}', 'original')" title="下载原图">
-                                <i class="bi bi-file-earmark-arrow-down"></i>
-                            </button>
                             <button class="overlay-btn" onclick="openImage(${index})" title="查看大图">
                                 <i class="bi bi-arrows-fullscreen"></i>
                             </button>
@@ -616,37 +611,51 @@
             return baseURL + relativePath;
         }
         
-        // 下载图片（缩略图点击）
+        // 下载WebP图片（缩略图点击）
         function downloadImage(url, filename, type) {
             // 获取图片路径（去掉/img/前缀）
             const imgPath = url.replace('/img/', '');
             
-            // 根据类型选择下载端点
-            let downloadUrl;
-            if (type === 'webp') {
-                downloadUrl = `/download/webp/${imgPath}`;
-            } else {
-                downloadUrl = `/download/original/${imgPath}`;
-            }
+            // 设置WebP下载端点
+            const downloadUrl = `/download/webp/${imgPath}`;
             
-            // 创建一个临时链接并触发下载
-            const a = document.createElement('a');
-            a.href = downloadUrl;
-            a.download = filename; 
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // 使用fetch API进行下载，避免多次请求
+            showNotification('正在下载WebP图片...', 'info');
             
-            // 显示下载通知
-            showNotification(`正在下载${type === 'webp' ? 'WebP图片' : '原图'}`, 'info');
+            fetch(downloadUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // 创建一个临时URL
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // 清理操作
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    showNotification('WebP图片下载成功', 'success');
+                })
+                .catch(error => {
+                    console.error('下载失败:', error);
+                    showNotification('下载失败，请重试', 'error');
+                });
         }
         
-        // 下载当前打开的图片（模态框中）
-        function downloadCurrentImage(type) {
+        // 下载当前打开的WebP图片（模态框中）
+        function downloadCurrentImage() {
             if (currentImageIndex < 0 || currentImageIndex >= currentImages.length) return;
             
             const image = currentImages[currentImageIndex];
-            downloadImage(image.url, image.originalName, type);
+            downloadImage(image.url, image.originalName, 'webp');
         }
         
         // 复制文本到剪贴板

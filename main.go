@@ -48,9 +48,9 @@ func main() {
 	router.GET("/gallery", security.AuthMiddleware(config), galleryHandler)
 	router.GET("/api/images", security.AuthMiddleware(config), listImagesHandler)
 	router.POST("/upload", security.AuthMiddleware(config), uploadHandler)
-	router.GET("/download/webp/*filename", downloadWebpHandler)                                          // 下载WebP图片，无需权限校验
-	router.GET("/download/original/*filename", security.AuthMiddleware(config), downloadOriginalHandler) // 下载原图需要权限校验
-	router.GET("/img/*filename", imageHandler)                                                           // 保留原有的/img/路径用于向后兼容
+	router.GET("/download/webp/*filename", downloadWebpHandler)  // 下载WebP图片，无需权限校验
+	router.HEAD("/download/webp/*filename", downloadWebpHandler) // 支持HEAD请求，处理预检请求
+	router.GET("/img/*filename", imageHandler)                   // 保留原有的/img/路径用于向后兼容
 
 	// 设置静态文件服务
 	router.Static("/uploads", config.UploadDir)
@@ -788,47 +788,6 @@ func downloadWebpHandler(c *gin.Context) {
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
 	c.Header("Content-Type", "image/webp")
 	c.File(webpPath)
-}
-
-// downloadOriginalHandler 提供原始图片下载（需要权限校验）
-func downloadOriginalHandler(c *gin.Context) {
-	// 获取文件路径
-	filePath := c.Param("filename")
-	if filePath == "" {
-		c.Status(http.StatusNotFound)
-		return
-	}
-
-	// 构建原始文件路径
-	originalPath := filepath.Join(config.PicsDir, filePath)
-
-	// 检查原始文件是否存在
-	if _, err := os.Stat(originalPath); os.IsNotExist(err) {
-		c.JSON(http.StatusNotFound, gin.H{"error": "原图不存在"})
-		return
-	}
-
-	// 提取文件扩展名
-	ext := strings.ToLower(filepath.Ext(filePath))
-
-	// 设置Content-Disposition头，使浏览器下载文件而不是在浏览器中打开
-	fileName := filepath.Base(filePath)
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", fileName))
-
-	// 根据扩展名设置Content-Type
-	contentType := "image/jpeg" // 默认
-	switch ext {
-	case ".png":
-		contentType = "image/png"
-	case ".gif":
-		contentType = "image/gif"
-	case ".svg":
-		contentType = "image/svg+xml"
-	case ".jpg", ".jpeg":
-		contentType = "image/jpeg"
-	}
-	c.Header("Content-Type", contentType)
-	c.File(originalPath)
 }
 
 // convertExistingImages 扫描所有原始图片目录并转换缺少对应WebP版本的图片
