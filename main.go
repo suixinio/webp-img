@@ -831,10 +831,19 @@ func convertExistingImages() {
 		// 构建对应的WebP路径
 		webpPath := filepath.Join(config.WebpDir, strings.TrimSuffix(relPath, ext)+".webp")
 
-		// 检查WebP文件是否已存在
-		if _, err := os.Stat(webpPath); os.IsNotExist(err) {
-			// WebP文件不存在，需要转换
-			log.Printf("转换图片: %s -> %s", path, webpPath)
+		// 检查WebP文件是否已存在，如果设置了强制重新生成，则无论是否存在都重新生成
+		webpExists := false
+		if _, err := os.Stat(webpPath); err == nil {
+			webpExists = true
+		}
+		
+		if config.ForceRegenerateWebP || !webpExists {
+			// WebP文件不存在或需要强制重新生成
+			if config.ForceRegenerateWebP && webpExists {
+				log.Printf("强制重新生成WebP图片: %s -> %s", path, webpPath)
+			} else {
+				log.Printf("转换图片: %s -> %s", path, webpPath)
+			}
 
 			// 确保WebP目标目录存在
 			webpDir := filepath.Dir(webpPath)

@@ -21,6 +21,7 @@ type Config struct {
 	// 图片转换配置
 	WebPQuality           int  // WebP质量 (1-100)
 	ConvertExistingImages bool // 启动时是否转换现有图片
+	ForceRegenerateWebP   bool // 是否强制重新生成WebP文件（即使已存在）
 
 	// 安全配置
 	AccessPassword    string        // 页面访问密码
@@ -119,6 +120,11 @@ func LoadConfig() *Config {
 	// 检查是否启用启动时转换现有图片
 	if convertStr := os.Getenv("WEBP_CONVERT_EXISTING"); convertStr != "" {
 		config.ConvertExistingImages = convertStr == "true" || convertStr == "1" || convertStr == "yes"
+	}
+
+	// 检查是否启用强制重新生成WebP文件
+	if forceStr := os.Getenv("WEBP_FORCE_REGENERATE"); forceStr != "" {
+		config.ForceRegenerateWebP = forceStr == "true" || forceStr == "1" || forceStr == "yes"
 	}
 
 	// 确保原始图片目录存在
