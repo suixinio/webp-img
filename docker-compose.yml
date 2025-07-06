@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   webp-img:
-    image: registry.cn-qingdao.aliyuncs.com/gitea_cloud/webp-img:latest
+    image: ghcr.io/suixinio/webp-img:v0.0.1
     container_name: webp-img
     ports:
       - "8080:8080"
